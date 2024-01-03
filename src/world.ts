@@ -52,6 +52,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     animatedObjects: THREE.Object3D[] = [];
     private moon: THREE.Mesh | undefined;
     metersToLanding: number = 0;
+    playerHitMoon: boolean = false;
 
     /**
      * @param {Promise<THREE.AudioListener>} audioListenerPromise
@@ -204,7 +205,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444);
         hemisphereLight.position.set(0, 10, 0);
-        hemisphereLight.intensity = .01;
+        hemisphereLight.intensity = .05;
         hemisphere.add(hemisphereLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff,1.5);
@@ -213,7 +214,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         directionalLight.castShadow = true;
         hemisphere.add(directionalLight);
 
-        //lensflare
+        // sun lensflare
         const textureLoader = new THREE.TextureLoader();
         const textureFlare0 = await textureLoader.loadAsync('./textures/lensflare0.png');
         const textureFlare3 = await textureLoader.loadAsync('./textures/lensflare3.png');
@@ -223,8 +224,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
         lensflare.addElement(new LensflareElement(textureFlare3, 70, 0.7));
 
         directionalLight.add(lensflare);
-        
 
+        // stars
         const particleCount = 15000;
         const particleColor = 0xffffff;
         const particleSize = 0.1;
@@ -248,12 +249,12 @@ export class World extends THREE.Object3D<WorldEventMap> {
         particlesGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positions), 3));
         particlesGeo.setAttribute("size", new THREE.BufferAttribute(new Float32Array(sizes), 1));
 
-        const rainMaterial = new THREE.PointsMaterial({
+        const starsMaterial = new THREE.PointsMaterial({
             color: particleColor,
             size: particleSize,
             //transparent: true
         });
-        const particles = new THREE.Points(particlesGeo, rainMaterial);
+        const particles = new THREE.Points(particlesGeo, starsMaterial);
 
         this.scene.add(particles);
 
@@ -280,9 +281,19 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         //check if player is on moon
         if(player.onFloor) {
-            player.position.copy(this.moon.worldToLocal(player.position));
-            player.removeFromParent();
-            this.moon.add(player);
+            if(!this.playerHitMoon) {
+                const totalVelocity = player.collisionVelocity;
+                player.position.copy(this.moon.worldToLocal(player.position));
+                player.removeFromParent();
+                this.moon.add(player);
+                this.playerHitMoon = true;
+                console.log("playerHitMoon",totalVelocity);
+                if(totalVelocity > 1.1) {
+                    player.damage(totalVelocity);
+                }
+            }
+        } else {
+            this.playerHitMoon = false;
         }
 
         //check if player is near placeholder

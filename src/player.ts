@@ -30,6 +30,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
     actions: THREE.AnimationAction[] | undefined;
     score: number = 0;
     effectMesh: THREE.Mesh | undefined;
+    collisionVelocity: number = 0;
 
     static initialize() {
         //load model     
@@ -122,7 +123,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
      * 
      * @param {World} world 
      */
-    collitions(world: World): void {
+    collisions(world: World): void {
         const result = world.worldOctree.capsuleIntersect(this.collider);
 
         this.onFloor = false;
@@ -133,6 +134,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
             if (!this.onFloor) {
                 this.velocity.addScaledVector(result.normal, - result.normal.dot(this.velocity));
             } else {
+                this.collisionVelocity = this.velocity.length();
                 this.velocity.multiplyScalar(0);
             }
             this.collider.translate(result.normal.multiplyScalar(result.depth));
@@ -155,7 +157,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
         const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime);
         this.collider.translate(deltaPosition);
 
-        this.collitions(world);
+        this.collisions(world);
 
         this.position.copy(this.collider.end);
         this.position.y -= this.collider.radius;
