@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import * as Tween from 'three/examples/jsm/libs/tween.module.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { createText } from 'three/addons/webxr/Text2D.js';
@@ -9,15 +14,19 @@ import { World } from './world';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export class App {
+    static BLOOM_SCENE = 1;
+
     static firstUserActionEvents = ['mousedown', 'touchstart', /*'mousemove','scroll',*/'keydown','gamepadconnected'];
     static firstUserAction = true;
     static gui: GUI = new GUI({ width: 200 });
+
+    private darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
+    private materials: any = {};
 
     private player: Player | undefined;
     private renderer: THREE.WebGLRenderer;
     private instructionText: any;
     private world: World | undefined;
-    private GRAVITY: number = 9.8;
 
     private keyStates: any = {};
     private clock: any;
@@ -37,6 +46,9 @@ export class App {
     private touchMoveX= 0;
     private touchMoveY= 0;
     private deferredInstallPrompt: any;
+    private bloomComposer: EffectComposer | undefined;
+    private finalComposer: EffectComposer | undefined;
+    private bloomLayer = new THREE.Layers();
 
     constructor() {
         this.clock = new THREE.Clock();
@@ -54,7 +66,7 @@ export class App {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.VSMShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMapping = THREE.ReinhardToneMapping;
         this.container.appendChild(this.renderer.domElement);
 
         this.container.appendChild( this.stats.dom );
@@ -62,6 +74,7 @@ export class App {
         this.audioListenerPromise = new Promise<THREE.AudioListener>((resolve) => {
             this.setAudioListener = resolve;
         });
+
 
         this.init();
     }
@@ -94,6 +107,8 @@ export class App {
         window.addEventListener('mousedown', () => this.renderer.domElement.requestPointerLock());
         window.addEventListener('mousemove', (e) => {
             if(!this.player) return;
+            //check pointer lock
+            if(document.pointerLockElement !== this.renderer.domElement) return;
             this.player.rotation.y -= e.movementX * 0.001;
             this.player.rotation.x += e.movementY * 0.001;
         });
@@ -203,7 +218,7 @@ export class App {
         this.filterMesh = filterMesh;
 
         //init player
-        this.player = new Player(this.scene, this.camera, this.GRAVITY);
+        this.player = new Player(this.scene, this.camera);
         this.player.teleport(this.world.playerSpawnPoint);
         this.player.addEventListener('dead', () => {
             this.vibrate(1000);
@@ -224,6 +239,54 @@ export class App {
         });
         this.scene.add(this.player);
         this.updateHud();
+
+        this.bloomLayer.set( App.BLOOM_SCENE );
+        const renderScene = new RenderPass( this.scene, this.camera );
+
+        const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+        bloomPass.threshold = 0;
+        bloomPass.strength = 0.2;
+        bloomPass.radius = 1;
+
+        this.bloomComposer = new EffectComposer( this.renderer );
+        this.bloomComposer.renderToScreen = false;
+        this.bloomComposer.addPass( renderScene );
+        this.bloomComposer.addPass( bloomPass );
+
+        const mixPass = new ShaderPass(
+            new THREE.ShaderMaterial( {
+                uniforms: {
+                    baseTexture: { value: null },
+                    bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                    }`,
+                fragmentShader: `
+                    uniform sampler2D baseTexture;
+                    uniform sampler2D bloomTexture;
+        
+                    varying vec2 vUv;
+        
+                    void main() {
+        
+                        gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+        
+                    }`,
+                defines: {}
+            } ), 'baseTexture'
+        );
+        mixPass.needsSwap = true;
+
+        const outputPass = new OutputPass();
+
+        this.finalComposer = new EffectComposer( this.renderer );
+        this.finalComposer.addPass( renderScene );
+        this.finalComposer.addPass( mixPass );
+        this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
 
@@ -299,6 +362,7 @@ export class App {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.bloomComposer?.setSize(window.innerWidth, window.innerHeight);
 
     }
 
@@ -394,6 +458,42 @@ export class App {
         this.orbitVontrols?.update(deltaTime);
         Tween.update(deltaTime);
         this.stats.update();
-        this.renderer.render(this.scene, this.camera);
+
+        this.render();
+    }
+
+    render() {
+        if(!this.scene || !this.camera) return;
+
+        if(!this.bloomComposer || !this.finalComposer){
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
+        this.scene.traverse( this.darkenNonBloomed.bind(this) );
+        this.bloomComposer.render();
+        this.scene.traverse( this.restoreMaterial.bind(this) );
+
+        // render the entire scene, then render bloom scene on top
+        this.finalComposer.render();
+    }
+
+    darkenNonBloomed( obj: THREE.Object3D ) {
+        const mesh = obj as THREE.Mesh;
+        if ( mesh.isMesh && this.bloomLayer.test( obj.layers ) === false ) {
+            this.materials[ obj.uuid ] = mesh.material;
+            mesh.material = this.darkMaterial;
+        }
+    }
+
+    restoreMaterial( obj: THREE.Object3D ) {
+        const mesh = obj as THREE.Mesh;
+        if ( this.materials[ obj.uuid ] ) {
+
+            mesh.material = this.materials[ obj.uuid ];
+            delete this.materials[ obj.uuid ];
+
+        }
+
     }
 }

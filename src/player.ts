@@ -53,12 +53,11 @@ export class Player extends THREE.Object3D implements DamageableObject {
      * @param {Promise<THREE.AudioListener>} audioListenerPromise
      * @param {number} gravity
      */
-    constructor(scene: THREE.Scene, camera: THREE.Camera, gravity: number) {
+    constructor(scene: THREE.Scene, camera: THREE.Camera) {
         super();
 
         this.scene = scene;
         this.camera = camera;
-        this.gravity = gravity;
 
         this.rotation.order = 'YXZ';
 
@@ -132,6 +131,8 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
             if (!this.onFloor) {
                 this.velocity.addScaledVector(result.normal, - result.normal.dot(this.velocity));
+            } else {
+                this.velocity.multiplyScalar(0);
             }
             this.collider.translate(result.normal.multiplyScalar(result.depth));
             this.colliderMesh.position.copy(this.collider.start);

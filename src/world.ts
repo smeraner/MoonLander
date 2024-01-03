@@ -31,19 +31,12 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
     static debug = false;
     static soundBufferAmbient: Promise<AudioBuffer>;
-    static model: Promise<THREE.Object3D>;
-    static treeModel: Promise<THREE.Object3D>;   
+    static model: Promise<THREE.Object3D>; 
     static initialize() {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
         World.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.mp3');
 
-        //load model
-        const gLTFLoader = new GLTFLoader();
-        World.treeModel = gLTFLoader.loadAsync('./models/tree.glb').then(gltf => {
-            gltf.scene.scale.set(0.002, 0.002, 0.002);
-            return gltf.scene;
-        });
         // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
 
@@ -136,11 +129,13 @@ export class World extends THREE.Object3D<WorldEventMap> {
             displacementMap: moonTexture, 
             displacementScale: 0.2,
             normalMap: moonNormalTexture,
-            normalScale: new THREE.Vector2(0.3, 0.3)
+            normalScale: new THREE.Vector2(0.3, 0.3),
          });
 
         const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
         this.moon = new THREE.Mesh(moonGeometry, moonMaterial);
+        this.moon.castShadow = true;
+        this.moon.receiveShadow = true;
         map.add(this.moon);
 
         this.rebuildOctree();
@@ -208,10 +203,10 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444);
         hemisphereLight.position.set(0, 10, 0);
-        hemisphereLight.intensity = .1;
+        hemisphereLight.intensity = .01;
         hemisphere.add(hemisphereLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff)//toGradient);
+        const directionalLight = new THREE.DirectionalLight(0xffffff,1.5);
         directionalLight.position.set(-1000, 20, -10);
         directionalLight.rotation.set(-Math.PI/2, 0, 0);
         directionalLight.castShadow = true;
@@ -273,10 +268,21 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100).toFixed(2));
         // this.animatedObjects.forEach(object => {
         // });
+
         // gravity player to moon 1,62 m/s²
         const moonGlobalPosition = new THREE.Vector3();
         this.moon.getWorldPosition(moonGlobalPosition);
-        player.velocity.addScaledVector(moonGlobalPosition.sub(player.position).normalize(), 0.162 * deltaTime);
+        const moonGravity = 1.62;
+        const distanceToMoon = player.position.distanceTo(moonGlobalPosition);
+        const gravityForce = moonGravity * (1 / distanceToMoon);
+        player.velocity.addScaledVector(moonGlobalPosition.sub(player.position).normalize(), gravityForce * deltaTime);
+
+        //check if player is on moon
+        if(player.onFloor) {
+            player.position.copy(this.moon.worldToLocal(player.position));
+            player.removeFromParent();
+            this.moon.add(player);
+        }
 
         //check if player is near placeholder
         this.checkPlayerCollision(player);
