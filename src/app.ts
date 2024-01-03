@@ -8,10 +8,10 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { createText } from 'three/addons/webxr/Text2D.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { Player } from './player';
 import { World } from './world';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -21,6 +21,7 @@ export class App {
     static gui: GUI = new GUI({ width: 200 });
 
     private darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
+    private darkPointsMaterial = new THREE.PointsMaterial( { color: 'black', size: 0.1 } );
     private materials: any = {};
 
     private player: Player | undefined;
@@ -240,12 +241,13 @@ export class App {
         this.scene.add(this.player);
         this.updateHud();
 
+        /*
         this.bloomLayer.set( App.BLOOM_SCENE );
         const renderScene = new RenderPass( this.scene, this.camera );
 
         const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
         bloomPass.threshold = 0;
-        bloomPass.strength = 0.2;
+        bloomPass.strength = 0.4;
         bloomPass.radius = 1;
 
         this.bloomComposer = new EffectComposer( this.renderer );
@@ -286,7 +288,7 @@ export class App {
         this.finalComposer = new EffectComposer( this.renderer );
         this.finalComposer.addPass( renderScene );
         this.finalComposer.addPass( mixPass );
-        this.finalComposer.addPass( outputPass );
+        this.finalComposer.addPass( outputPass );*/
 
         //this.enableOrbitControls();
 
@@ -363,7 +365,7 @@ export class App {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.bloomComposer?.setSize(window.innerWidth, window.innerHeight);
-
+        this.finalComposer?.setSize(window.innerWidth, window.innerHeight);
     }
 
     private controls(deltaTime: number): void {
@@ -483,17 +485,17 @@ export class App {
         if ( mesh.isMesh && this.bloomLayer.test( obj.layers ) === false ) {
             this.materials[ obj.uuid ] = mesh.material;
             mesh.material = this.darkMaterial;
+        } else if ( (obj as THREE.Points).isPoints && this.bloomLayer.test( obj.layers ) === false ) {
+            this.materials[ obj.uuid ] = mesh.material;
+            mesh.material = this.darkPointsMaterial;
         }
     }
 
     restoreMaterial( obj: THREE.Object3D ) {
         const mesh = obj as THREE.Mesh;
-        if ( this.materials[ obj.uuid ] ) {
-
+         if ( this.materials[ obj.uuid ] ) {
             mesh.material = this.materials[ obj.uuid ];
             delete this.materials[ obj.uuid ];
-
         }
-
     }
 }

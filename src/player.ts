@@ -64,6 +64,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
         Player.model.then(gltf => {
             this.model = gltf.scene;
             if(!this.model) return;
+            this.model.layers.enable(1); //bloom layer
             this.add(this.model);
         });
 

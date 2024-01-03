@@ -136,6 +136,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.moon = new THREE.Mesh(moonGeometry, moonMaterial);
         this.moon.castShadow = true;
         this.moon.receiveShadow = true;
+        this.moon.layers.enable(1); //bloom layer
         map.add(this.moon);
 
         this.rebuildOctree();
@@ -222,7 +223,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         lensflare.addElement(new LensflareElement(textureFlare3, 70, 0.7));
 
         directionalLight.add(lensflare);
-
+        
 
         const particleCount = 15000;
         const particleColor = 0xffffff;
