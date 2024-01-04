@@ -52,6 +52,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     animatedObjects: THREE.Object3D[] = [];
     private moon: THREE.Mesh | undefined;
     private earth: THREE.Mesh | undefined;
+    private stars: THREE.Object3D<THREE.Object3DEventMap> | undefined;
     public metersToLanding: number = 0;
     public playerHitMoon: boolean = false;
 
@@ -236,14 +237,14 @@ export class World extends THREE.Object3D<WorldEventMap> {
             new THREE.PointsMaterial({ color: starsColors[2], size: starsSize[2], /*transparent: true*/ }),
         ];
 
-        const stars = new THREE.Object3D();
+        this.stars = new THREE.Object3D();
         for (let i = 0; i < 3; i++) {
             const starssGeo = this.createStarsParticleGeo(starsCount, starssAreaSize, starsFreeAreaSize, starsSize);
             const starsMesh = new THREE.Points(starssGeo, starsMaterials[i]);
-            stars.add(starsMesh);
+            this.stars.add(starsMesh);
         }
 
-        this.scene.add(stars);
+        this.scene.add(this.stars);
 
         this.scene.add(hemisphere);
     }
@@ -307,6 +308,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
         } else {
             this.playerHitMoon = false;
         }
+
+        if(this.stars) this.stars.position.copy(player.position);
 
         //check if player is near placeholder
         this.checkPlayerCollision(player);
