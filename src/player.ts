@@ -14,9 +14,9 @@ export class Player extends THREE.Object3D implements DamageableObject {
     mixer: THREE.AnimationMixer | undefined;
     model: THREE.Object3D<THREE.Object3DEventMap> | undefined;
     gravity = 0;
-    speedOnFloor = 15;
-    speedInAir = 10;
-    jumpHeight = 4;
+    speedOnFloor = 10;
+    speedInAir = 7;
+    currentSpeed = 0;
     onFloor = false;
 
     colliderHeight = .3;
@@ -203,14 +203,11 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.onFloor = false;
 
         if (result) {
-            this.onFloor = result.normal.y > 0;
+            this.onFloor = true;
 
-            if (!this.onFloor) {
-                this.velocity.addScaledVector(result.normal, - result.normal.dot(this.velocity));
-            } else {
-                this.collisionVelocity = this.velocity.length();
-                this.velocity.multiplyScalar(0);
-            }
+            this.collisionVelocity = this.velocity.length();
+            this.velocity.multiplyScalar(0);
+            
             this.collider.translate(result.normal.multiplyScalar(result.depth));
             this.colliderMesh.position.copy(this.collider.start);
         }
@@ -227,6 +224,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
         //     damping *= 0.1; // small air resistance
         // }
         this.velocity.addScaledVector(this.velocity, damping);
+        this.currentSpeed = this.velocity.length();
 
         const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime);
         this.collider.translate(deltaPosition);
@@ -234,11 +232,6 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.collisions(world);
 
         this.position.copy(this.collider.end);
-        this.position.y -= this.collider.radius;
-
-        if(this.effectMesh && this.effectMesh.visible) {
-            this.effectMesh.rotation.z += 2*deltaTime;
-        }
 
         this.colliderMesh.visible = Player.debug;
         if(this.mixer) this.mixer.update(deltaTime);
@@ -259,7 +252,6 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
     getForwardVector(): THREE.Vector3 {
         this.camera.getWorldDirection(this.direction);
-        this.direction.y = 0;
         this.direction.normalize();
 
         return this.direction;
@@ -269,7 +261,6 @@ export class Player extends THREE.Object3D implements DamageableObject {
     getSideVector(): THREE.Vector3 {
 
         this.camera.getWorldDirection(this.direction);
-        this.direction.y = 0;
         this.direction.normalize();
         this.direction.cross(this.camera.up);
 

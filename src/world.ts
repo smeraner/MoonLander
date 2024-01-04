@@ -277,20 +277,20 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         this.earth.rotation.y += 0.01 * deltaTime;
 
-        this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
         // this.animatedObjects.forEach(object => {
         // });
 
         // gravity player to moon 1,62 m/s²
         const moonGlobalPosition = new THREE.Vector3();
         this.moon.getWorldPosition(moonGlobalPosition);
-        const moonGravity = 1.62;
+        const moonGravity = 1.62 * 50;
         const distanceToMoon = player.position.distanceTo(moonGlobalPosition);
         const gravityForce = moonGravity * (1 / distanceToMoon);
         player.velocity.addScaledVector(moonGlobalPosition.sub(player.position).normalize(), gravityForce * deltaTime);
 
         //check if player is on moon
         if(player.onFloor) {
+            this.metersToLanding = 0;
             //first time player hits moon
             if(!this.playerHitMoon) {
                 this.playerHitMoon = true;
@@ -309,6 +309,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
                 }
             }
         } else {
+            this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
+
             //player left the moon
             if(this.playerHitMoon && this.scene) {
                 this.playerHitMoon = false;

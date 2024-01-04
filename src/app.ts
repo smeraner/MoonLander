@@ -417,13 +417,13 @@ export class App {
     private updateHud(){
         if(!this.player) return;
 
-        let hudText = ``;
+        let hudText = `-> ${this.player.currentSpeed.toFixed(0)}`;
         if(this.player.health === 0) {
             hudText = " ☠ Game over. Refresh to restart.";
         } else {
             hudText += ` ♥ ${this.player.health.toFixed(0)}`;
         }
-        hudText += ` 🞖 ${this.world?.metersToLanding.toFixed(2)} m`;
+        hudText += ` 🞖 ${this.world?.metersToLanding.toFixed(1)} m`;
 
         this.updateInstructionText(hudText);
     }
