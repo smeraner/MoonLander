@@ -119,7 +119,7 @@ module.exports = (env, argv) => ({
                             type: "image/png"
                         }
                     ],
-                    start_url: "/moon-lander/",
+                    start_url: "/MoonLander/",
                     display: "standalone",
                     theme_color: "#ffffff",
                     background_color: "#ffffff",
