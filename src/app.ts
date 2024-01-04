@@ -406,8 +406,9 @@ export class App {
             if(!this.gamepad) return;
             this.player.velocity.add(this.player.getForwardVector().multiplyScalar(-this.gamepad.axes[1] * speedDelta));
             this.player.velocity.add(this.player.getSideVector().multiplyScalar(this.gamepad.axes[0] * speedDelta));
+            this.player.rotate(this.gamepad.axes[2] * 0.001, this.gamepad.axes[3] * -0.001);
             if(this.gamepad.buttons[0].pressed) {
-                //this.player.jump();
+                this.restart();
             }
         }
 
