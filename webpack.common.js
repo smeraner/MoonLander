@@ -3,10 +3,9 @@ const fs = require('fs');
 const webpack = require('webpack');
 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const artifact = require('./package.json');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
-
+const artifact = require('./package.json');
 const fileName = `${artifact.name}-${artifact.version.slice(0, 3)}`;
 
 module.exports = (env, argv) => ({
@@ -85,7 +84,11 @@ module.exports = (env, argv) => ({
             ],
         }),
         new HtmlWebpackPlugin({
-            title: 'Three.js Webpack Boilerplate',
+            title: artifact.displayName,
+            meta: {
+                'description': artifact.description,
+                'og:image': { property: 'og:image', content: 'textures/moon_lander.jpg' },
+            },
             //favicon: path.resolve(__dirname, 'public/favicon.png'),
             template: path.resolve(__dirname, 'src/index.html'), // template file
             filename: 'index.html', // output file
@@ -101,9 +104,9 @@ module.exports = (env, argv) => ({
                 }, seed);
 
                 return {
-                    name: "MoonLander",
-                    short_name: "MoonLander",
-                    description: "Moon Lander Game ",
+                    name: artifact.displayName,
+                    short_name: artifact.displayName,
+                    description: artifact.description,
                     icons: [
                         {
                             src: "textures/icons/android-chrome-192x192.png",
@@ -120,7 +123,7 @@ module.exports = (env, argv) => ({
                     display: "standalone",
                     theme_color: "#ffffff",
                     background_color: "#ffffff",
-                    orientation: "portrait",
+                    orientation: "portrait-primary",
                     files: manifestFiles,
                 };
             },

@@ -2,9 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset=utf-8 />
-		<title>Moon Lander</title>
-		<meta name="description" content="Moon Lander is a cheeky little bunny who often has things going wrong. Let's put it this way, he's not the brightest candle on the cake. But as the saying goes: If you don't have it in your head, you have it in your feet.	Help Moon Lander sort out his misfortunes before his parents find out. " />
-		<meta property="og:image" content="./textures/runny_bunny.jpg">
+		<title><%= htmlWebpackPlugin.options.title %></title>
 		<link rel='icon' type='image/png' href='textures/icons/favicon.png'>
 		<link rel='icon' sizes='192x192' href='textures/icons/android-chrome-192x192.png'>
 		<link rel='apple-touch-icon' href='textures/icons/apple-touch-icon'>
@@ -15,7 +13,7 @@
 	</head>
 	<body>
 		<div id="info">
-			<h1>Moon Lander</h1>
+			<h1><%= htmlWebpackPlugin.options.title %></h1>
 			WASD to move or use gamepad.
 		</div>
 		<!-- start screen, fill screen -->
