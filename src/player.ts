@@ -9,6 +9,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
     static debug = false;
     static model: Promise<any>;
     static smokeTexture: Promise<THREE.Texture>;
+    static soundBufferEngine: Promise<AudioBuffer>;
 
     mixer: THREE.AnimationMixer | undefined;
     model: THREE.Object3D<THREE.Object3DEventMap> | undefined;
@@ -35,6 +36,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
     collisionVelocity: number = 0;
     tweens: TWEEN.Tween<THREE.Euler>[] = [];
     smoke= new THREE.Object3D();
+    soundEngine: THREE.PositionalAudio | undefined;
 
     static initialize() {
         //load model     
@@ -51,6 +53,10 @@ export class Player extends THREE.Object3D implements DamageableObject {
             return gltf;
         });
 
+        //load audio
+        const audioLoader = new THREE.AudioLoader();
+        Player.soundBufferEngine = audioLoader.loadAsync('./sounds/engine.ogg');;
+
         const textureLoader = new THREE.TextureLoader();
         Player.smokeTexture = textureLoader.loadAsync('./textures/smoke.png');
 
@@ -61,7 +67,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
      * @param {Promise<THREE.AudioListener>} audioListenerPromise
      * @param {number} gravity
      */
-    constructor(scene: THREE.Scene, camera: THREE.Camera) {
+    constructor(scene: THREE.Scene, audioListenerPromise: Promise<THREE.AudioListener> ,camera: THREE.Camera) {
         super();
 
         this.scene = scene;
@@ -70,6 +76,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.rotation.order = 'YXZ';
 
         this.loadModel();
+        this.initAudio(audioListenerPromise);
 
         this.camera.position.set(1, 0.8, -2);
         this.camera.lookAt(1, 0.8, 0);
@@ -84,6 +91,14 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.colliderMesh = colliderMesh;
         this.scene.add(colliderMesh);
         this.colliderMesh.visible = Player.debug;
+    }
+
+    async initAudio(audioListenerPromise: Promise<THREE.AudioListener>) {
+        const audioListener = await audioListenerPromise;
+        const soundBufferEngine = await Player.soundBufferEngine;
+        this.soundEngine = new THREE.PositionalAudio(audioListener);
+        this.soundEngine.setBuffer(soundBufferEngine);
+        this.soundEngine.setVolume(1);
     }
 
     async loadModel() {
@@ -140,6 +155,18 @@ export class Player extends THREE.Object3D implements DamageableObject {
         }
         rotate.rotation.y -= x;
         rotate.rotation.x -= y;
+    }
+
+    useEngine(forwardVectorMultiplier: number | null, sideVectorMultiplyer: number | null) {
+        if(this.soundEngine && !this.soundEngine.isPlaying) {
+            this.soundEngine.play();
+        }
+        if(sideVectorMultiplyer !== null) {
+            this.velocity.add(this.getSideVector().multiplyScalar(sideVectorMultiplyer));
+        }
+        if(forwardVectorMultiplier !== null) {
+            this.velocity.add(this.getForwardVector().multiplyScalar(forwardVectorMultiplier));
+        }
     }
 
     /**

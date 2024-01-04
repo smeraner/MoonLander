@@ -220,7 +220,7 @@ export class App {
         this.filterMesh = filterMesh;
 
         //init player
-        this.player = new Player(this.scene, this.camera);
+        this.player = new Player(this.scene, this.audioListenerPromise, this.camera);
         this.player.teleport(this.world.playerSpawnPoint);
         this.player.addEventListener('dead', () => {
             this.vibrate(1000);
@@ -375,19 +375,19 @@ export class App {
 
         //keyboard controls
         if (this.keyStates['KeyW']) {
-            this.player.velocity.add(this.player.getForwardVector().multiplyScalar(speedDelta));
+            this.player.useEngine(speedDelta, null);
         }
 
         if (this.keyStates['KeyS']) {
-            this.player.velocity.add(this.player.getForwardVector().multiplyScalar(-speedDelta));
+            this.player.useEngine(-speedDelta, null);
         }
 
         if (this.keyStates['KeyA']) {
-            this.player.velocity.add(this.player.getSideVector().multiplyScalar(-speedDelta));
+            this.player.useEngine(null, -speedDelta);
         }
 
         if (this.keyStates['KeyD']) {
-            this.player.velocity.add(this.player.getSideVector().multiplyScalar(speedDelta));
+            this.player.useEngine(null, speedDelta);
         }
 
         if (this.keyStates['Space']) {
@@ -396,16 +396,16 @@ export class App {
 
         //touch move
         if(this.touchMoveX > 0 || this.touchMoveY > 0) {
-            this.player.velocity.add(this.player.getSideVector().multiplyScalar(this.touchMoveX * speedDelta));
-            this.player.velocity.add(this.player.getForwardVector().multiplyScalar(-this.touchMoveY * speedDelta));
+            this.player.useEngine(-this.touchMoveY * speedDelta, this.touchMoveX * speedDelta);
         }
 
         //gamepad controls
         if(this.gamepad) {
             this.gamepad = navigator.getGamepads()[this.gamepad.index];
             if(!this.gamepad) return;
-            this.player.velocity.add(this.player.getForwardVector().multiplyScalar(-this.gamepad.axes[1] * speedDelta));
-            this.player.velocity.add(this.player.getSideVector().multiplyScalar(this.gamepad.axes[0] * speedDelta));
+            if(this.gamepad.axes[1] !== 0 || this.gamepad.axes[0] !== 0) {
+                this.player.useEngine(-this.gamepad.axes[1] * speedDelta, this.gamepad.axes[0] * speedDelta);
+            }
             this.player.rotate(this.gamepad.axes[2] * 0.001, this.gamepad.axes[3] * -0.001);
             if(this.gamepad.buttons[0].pressed) {
                 this.restart();

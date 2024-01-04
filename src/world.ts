@@ -35,7 +35,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     static initialize() {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
-        World.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.mp3');
+        World.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.ogg');
 
         // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
@@ -78,7 +78,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
         const soundBufferAmbient = await World.soundBufferAmbient;
         this.soundAmbient = new THREE.Audio(audioListener);
         this.soundAmbient.setBuffer(soundBufferAmbient);
-        this.soundAmbient.setLoop(true);
         this.soundAmbient.setVolume(1);
 
         this.playWorldAudio();
