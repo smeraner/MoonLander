@@ -47,12 +47,13 @@ export class World extends THREE.Object3D<WorldEventMap> {
     scene: THREE.Scene | undefined;
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
-    map: THREE.Object3D<THREE.Object3DEventMap> | undefined;
+    collisionMap: THREE.Object3D<THREE.Object3DEventMap> | undefined;
     helper: OctreeHelper | undefined;
     animatedObjects: THREE.Object3D[] = [];
     private moon: THREE.Mesh | undefined;
-    metersToLanding: number = 0;
-    playerHitMoon: boolean = false;
+    private earth: THREE.Mesh | undefined;
+    public metersToLanding: number = 0;
+    public playerHitMoon: boolean = false;
 
     /**
      * @param {Promise<THREE.AudioListener>} audioListenerPromise
@@ -106,24 +107,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
         const moonTexture = await textureLoader.loadAsync('./textures/moon.jpg');
         const moonNormalTexture = await textureLoader.loadAsync('./textures/moon_normal.jpg');
 
+        this.collisionMap = new THREE.Object3D();
 
-        //big world roller geometry
-        const map = this.map = new THREE.Object3D();
-        // const widthHeight = 1024;
-        // const dataNoiseTexture = new THREE.DataTexture(new Uint8Array(widthHeight * widthHeight * 4), widthHeight, widthHeight, THREE.RGBAFormat);
-        // dataNoiseTexture.wrapS = THREE.RepeatWrapping;
-        // dataNoiseTexture.wrapT = THREE.RepeatWrapping;
-        // dataNoiseTexture.repeat.set(5, 2);
-        // dataNoiseTexture.needsUpdate = true;
-
-        // for (let i = 0; i < dataNoiseTexture.image.data.length; i += 4) {
-        //     //random number between 200 and 255
-        //     const x = Math.floor(Math.random() * 55) + 200;
-        //     dataNoiseTexture.image.data[i + 0] = x;
-        //     dataNoiseTexture.image.data[i + 1] = x;
-        //     dataNoiseTexture.image.data[i + 2] = x;
-        //     dataNoiseTexture.image.data[i + 3] = x;
-        // }
         const moonMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffffff, 
             map: moonTexture, 
@@ -138,11 +123,20 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.moon.castShadow = true;
         this.moon.receiveShadow = true;
         this.moon.layers.enable(1); //bloom layer
-        map.add(this.moon);
+        this.collisionMap.add(this.moon);
+
+        const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
+        const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
+        const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture });
+        this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        this.earth.position.set(700, 0, -100);
+        this.earth.castShadow = true;
+        this.earth.receiveShadow = true;
+        this.collisionMap.add(this.earth);
 
         this.rebuildOctree();
 
-        this.scene.add(map);
+        this.scene.add(this.collisionMap);
 
         this.addHemisphere();
 
@@ -272,9 +266,11 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     update(deltaTime: number, player: Player) {
-        if (!this.moon) return;
+        if (!this.moon ||!this.earth) return;
 
         this.moon.rotation.y += 0.05 * deltaTime;
+
+        this.earth.rotation.y += 0.01 * deltaTime;
 
         this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
         // this.animatedObjects.forEach(object => {
@@ -319,8 +315,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     rebuildOctree() {
-        if (this.map) {
-            this.worldOctree.clear().fromGraphNode(this.map);
+        if (this.collisionMap) {
+            this.worldOctree.clear().fromGraphNode(this.collisionMap);
         }
     }
 }
