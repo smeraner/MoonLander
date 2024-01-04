@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -32,6 +33,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     static debug = false;
     static soundBufferAmbient: Promise<AudioBuffer>;
     static model: Promise<THREE.Object3D>; 
+    lightShadowMapViewer: ShadowMapViewer | undefined;
     static initialize() {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
@@ -134,8 +136,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
         const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01,1.01,1.01), earthAtmosphereMaterial);
         this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
         this.earth.position.set(1800, 0, 700);
-        this.earth.castShadow = true;
-        this.earth.receiveShadow = true;
         this.earth.add(earthAtmosphere);
         this.collisionMap.add(this.earth);
 
@@ -199,19 +199,33 @@ export class World extends THREE.Object3D<WorldEventMap> {
         hemisphere = new THREE.Group();
         hemisphere.name = "Hemisphere";
 
-        // Sky
         this.scene.background = new THREE.Color(0x000000);
 
+        //sun light
         const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444);
         hemisphereLight.position.set(0, 10, 0);
         hemisphereLight.intensity = .05;
         hemisphere.add(hemisphereLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff,1.5);
+        const SHADOW_MAP_WIDTH = 1024, SHADOW_MAP_HEIGHT = 1024;
+        const directionalLight = new THREE.DirectionalLight(0xffffff,3);
         directionalLight.position.set(-1000, 20, -10);
         directionalLight.rotation.set(-Math.PI/2, 0, 0);
         directionalLight.castShadow = true;
+        directionalLight.shadow.camera.top = 18;
+        directionalLight.shadow.camera.bottom = - 18;
+        directionalLight.shadow.camera.left = - 18;
+        directionalLight.shadow.camera.right = 18;
+        directionalLight.shadow.camera.near = 18;
+        directionalLight.shadow.camera.far = 1100;
+        directionalLight.shadow.bias = 0.0001;
+
+        directionalLight.shadow.mapSize.width = SHADOW_MAP_WIDTH;
+        directionalLight.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
         hemisphere.add(directionalLight);
+
+        // const shadowHelper = new THREE.CameraHelper( directionalLight.shadow.camera );
+        // this.scene.add( shadowHelper );
 
         // sun lensflare
         const textureLoader = new THREE.TextureLoader();
@@ -248,7 +262,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.scene.add(hemisphere);
     }
 
-
+ 
     private createStarsParticleGeo(starsCount: number, starssAreaSize: number[], starsFreeAreaSize: number[], starsSize: number[]) {
         const positions = [];
         const sizes = [];
@@ -273,7 +287,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     update(deltaTime: number, player: Player) {
         if (!this.moon ||!this.earth) return;
 
-        this.moon.rotation.y += 0.05 * deltaTime;
+        this.moon.rotation.y += 0.03 * deltaTime;
 
         this.earth.rotation.y += 0.01 * deltaTime;
 
@@ -305,7 +319,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
                 const totalVelocity = player.collisionVelocity;
                 console.log("playerHitMoon",totalVelocity);
                 if(totalVelocity > 0.8) {
-                    player.damage(totalVelocity*7);
+                    player.damage(totalVelocity*10);
                 }
             }
         } else {

@@ -85,8 +85,6 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.scene = scene;
         this.camera = camera;
 
-        this.rotation.order = 'YXZ';
-
         this.loadModel();
         this.initAudio(audioListenerPromise);
 
@@ -161,12 +159,13 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
     }
 
     rotate(x: number, y: number) {
-        let rotate: THREE.Object3D = this;
         if(this.onFloor) {
-            rotate = this.camera;
+            this.camera.rotation.y += x;
+            this.camera.rotation.x -= y;
+        } else {
+            this.rotation.y -= x;
+            this.rotation.x -= y;
         }
-        rotate.rotation.y -= x;
-        rotate.rotation.x -= y;
     }
 
     useEngine(forwardVectorMultiplier: number | null, sideVectorMultiplyer: number | null) {

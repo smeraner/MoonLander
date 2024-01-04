@@ -66,15 +66,13 @@ export class App {
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.VSMShadowMap;
-        this.renderer.toneMapping = THREE.ReinhardToneMapping;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.container.appendChild(this.renderer.domElement);
 
         this.container.appendChild( this.stats.dom );
 
-        this.audioListenerPromise = new Promise<THREE.AudioListener>((resolve) => {
-            this.setAudioListener = resolve;
-        });
+        this.audioListenerPromise = new Promise<THREE.AudioListener>((resolve) => this.setAudioListener = resolve);
 
 
         this.init();
@@ -121,7 +119,6 @@ export class App {
             this.gamepad.buttons.length, this.gamepad.axes.length);
         });
 
-        this.renderer.setAnimationLoop(this.update.bind(this));
     }
 
     hanldeTouch(e: TouchEvent) {
@@ -170,8 +167,6 @@ export class App {
             document.removeEventListener(event, this.onFirstUserAction.bind(this));
         });
 
-        this.askInstallPWA();
-
         document.getElementById('loading')?.remove();
 
         //init audio
@@ -182,6 +177,9 @@ export class App {
 
         window.addEventListener('blur', () => listener.context.suspend());
         window.addEventListener('focus', () => listener.context.resume());
+        
+        //start game loop
+        this.renderer.setAnimationLoop(this.update.bind(this));
     }
 
     askInstallPWA() {
