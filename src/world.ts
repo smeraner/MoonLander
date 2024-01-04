@@ -116,7 +116,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
             displacementMap: moonTexture, 
             displacementScale: 0.2,
             normalMap: moonNormalTexture,
-            normalScale: new THREE.Vector2(0.3, 0.3),
+            normalScale: new THREE.Vector2(0.3, 0.3)
          });
 
         const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
@@ -131,7 +131,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         const earthCloudsTexture = await textureLoader.loadAsync('./textures/earth_clouds.jpg');
         const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
         const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, metalnessMap: earthReflectionTexture, roughness: 0.5, metalness: 0.5 });
-        const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.4 });
+        const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.5 });
         const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01,1.01,1.01), earthAtmosphereMaterial);
         this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
         this.earth.position.set(1800, 0, 700);
@@ -292,23 +292,42 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         //check if player is on moon
         if(player.onFloor) {
+            //first time player hits moon
             if(!this.playerHitMoon) {
-                const totalVelocity = player.collisionVelocity;
+                this.playerHitMoon = true;
+                player.smoke.visible = false;
+                player.tweens.forEach(tween => tween.stop());
+                
+                //attach player from sceen to moon                
                 player.position.copy(this.moon.worldToLocal(player.position));
-                if(player.tween) player.tween.stop();
-                //player.lookAt(this.moon.position);
                 player.removeFromParent();
                 this.moon.add(player);
-                this.playerHitMoon = true;
+
+                const totalVelocity = player.collisionVelocity;
                 console.log("playerHitMoon",totalVelocity);
                 if(totalVelocity > 0.8) {
                     player.damage(totalVelocity*7);
                 }
             }
         } else {
-            this.playerHitMoon = false;
+            //player left the moon
+            if(this.playerHitMoon && this.scene) {
+                this.playerHitMoon = false;
+                player.tweens.forEach(tween => tween.start());
+
+                //detach player from moon back to scene
+                player.position.copy(this.moon.localToWorld(player.position));
+                player.removeFromParent();
+                this.scene.add(player);
+            }
+            if(this.metersToLanding < 200) {
+                player.smoke.visible = true;
+            } else {
+                player.smoke.visible = false;
+            }
         }
 
+        //stars follow player
         if(this.stars) this.stars.position.copy(player.position);
 
         //check if player is near placeholder

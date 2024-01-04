@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import * as Tween from 'three/examples/jsm/libs/tween.module.js';
+import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -460,7 +460,7 @@ export class App {
         }
 
         this.orbitVontrols?.update(deltaTime);
-        Tween.update(deltaTime);
+        TWEEN.update(deltaTime);
         this.stats.update();
 
         this.render();

@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import * as Tween from 'three/examples/jsm/libs/tween.module.js';
+import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
 import { World } from './world';
 import { Capsule } from 'three/addons/math/Capsule.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 
 export class Player extends THREE.Object3D implements DamageableObject {
     static debug = false;
     static model: Promise<any>;
-    static starsTexture: Promise<THREE.Texture>;
+    static smokeTexture: Promise<THREE.Texture>;
 
     mixer: THREE.AnimationMixer | undefined;
     model: THREE.Object3D<THREE.Object3DEventMap> | undefined;
@@ -32,7 +33,8 @@ export class Player extends THREE.Object3D implements DamageableObject {
     score: number = 0;
     effectMesh: THREE.Mesh | undefined;
     collisionVelocity: number = 0;
-    tween: Tween.Tween<THREE.Euler> | undefined;
+    tweens: TWEEN.Tween<THREE.Euler>[] = [];
+    smoke= new THREE.Object3D();
 
     static initialize() {
         //load model     
@@ -49,6 +51,9 @@ export class Player extends THREE.Object3D implements DamageableObject {
             return gltf;
         });
 
+        const textureLoader = new THREE.TextureLoader();
+        Player.smokeTexture = textureLoader.loadAsync('./textures/smoke.png');
+
     }
 
     /**
@@ -64,20 +69,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
         this.rotation.order = 'YXZ';
 
-        Player.model.then(gltf => {
-            this.model = gltf.scene;
-            if(!this.model) return;
-
-            this.tween = new Tween.Tween(this.model.rotation)
-                .to({ x: this.model.rotation.x, y: 0.05 , z: this.model.rotation.y }, 2000)
-                .easing(Tween.Easing.Quadratic.InOut)
-                .yoyo(true)
-                .repeat(Infinity)
-                .start();
-
-            this.model.layers.enable(1); //bloom layer
-            this.add(this.model);
-        });
+        this.loadModel();
 
         this.camera.position.set(1, 0.8, -2);
         this.camera.lookAt(1, 0.8, 0);
@@ -92,6 +84,48 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.colliderMesh = colliderMesh;
         this.scene.add(colliderMesh);
         this.colliderMesh.visible = Player.debug;
+    }
+
+    async loadModel() {
+        const landerModel = await Player.model;
+
+        this.model = landerModel.scene;
+        if(!this.model) return;
+
+        this.tweens.push(new TWEEN.Tween(this.model.rotation)
+            .to({ x: this.model.rotation.x, y: 0.05 , z: this.model.rotation.z }, 2000)
+            .easing(TWEEN.Easing.Quadratic.InOut)
+            .yoyo(true)
+            .repeat(Infinity)
+            .start());
+
+        this.model.layers.enable(1); //bloom layer
+        this.add(this.model);
+
+        this.smoke.visible = false;
+        const smokeTexture = await Player.smokeTexture;
+        const smokeMaterial = new THREE.MeshBasicMaterial({ map: smokeTexture, color: 0xcccccc, fog: true, opacity: 0.5, transparent: true });
+
+        for(let i = 0; i < 7; i++) {
+            const smokeSize = Math.random() * 3 + 7;
+            const smokeParticleGeo = new THREE.PlaneGeometry(smokeSize, smokeSize);
+            const smokeParticle = new THREE.Mesh(smokeParticleGeo, smokeMaterial);
+            smokeParticle.lookAt(0, 1, 0);
+
+            const xpos = Math.random() * 6 - 2;
+            const ypos = Math.random() * 1 - 0.7;
+            const zpos = Math.random() * 7 - 4;
+
+            smokeParticle.position.set(xpos, ypos, zpos);
+
+            this.tweens.push(new TWEEN.Tween(smokeParticle.rotation)
+                .to({ x: smokeParticle.rotation.x, y:smokeParticle.rotation.y , z: 2 * Math.PI }, 500 + Math.random() * 500)
+                .repeat(Infinity)
+                .start())
+                this.smoke.add(smokeParticle);
+        }
+        this.model.add(this.smoke);
+
     }
 
     reset() {
@@ -181,7 +215,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
         this.colliderMesh.visible = Player.debug;
         if(this.mixer) this.mixer.update(deltaTime);
-        if(this.tween) this.tween.update();
+        TWEEN.update();
     }
 
     teleport(position: THREE.Vector3): void {
