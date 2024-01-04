@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as Tween from 'three/examples/jsm/libs/tween.module.js';
 import { World } from './world';
 import { Capsule } from 'three/addons/math/Capsule.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -31,6 +32,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
     score: number = 0;
     effectMesh: THREE.Mesh | undefined;
     collisionVelocity: number = 0;
+    tween: Tween.Tween<THREE.Euler> | undefined;
 
     static initialize() {
         //load model     
@@ -65,6 +67,14 @@ export class Player extends THREE.Object3D implements DamageableObject {
         Player.model.then(gltf => {
             this.model = gltf.scene;
             if(!this.model) return;
+
+            this.tween = new Tween.Tween(this.model.rotation)
+                .to({ x: this.model.rotation.x, y: 0.05 , z: this.model.rotation.y }, 2000)
+                .easing(Tween.Easing.Quadratic.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start();
+
             this.model.layers.enable(1); //bloom layer
             this.add(this.model);
         });
@@ -89,10 +99,13 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.score = 0;
     }
 
-    jump(): void {
-        if (this.onFloor) {
-            this.velocity.y = this.jumpHeight;
+    rotate(x: number, y: number) {
+        let rotate: THREE.Object3D = this;
+        if(this.onFloor) {
+            rotate = this.camera;
         }
+        rotate.rotation.y -= x;
+        rotate.rotation.x -= y;
     }
 
     /**
@@ -168,6 +181,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
         this.colliderMesh.visible = Player.debug;
         if(this.mixer) this.mixer.update(deltaTime);
+        if(this.tween) this.tween.update();
     }
 
     teleport(position: THREE.Vector3): void {

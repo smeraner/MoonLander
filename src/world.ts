@@ -226,41 +226,50 @@ export class World extends THREE.Object3D<WorldEventMap> {
         directionalLight.add(lensflare);
 
         // stars
-        const particleCount = 15000;
-        const particleColor = 0xffffff;
-        const particleSize = 0.1;
-        const particlesAreaSize = [1000, 1000, 1000];
-        const particleFreeAreaSize = [500, 500, 500];
-        const positions = [];
-        const sizes = [];
-        const particlesGeo = new THREE.BufferGeometry();
-        for (let i = 0; i < particleCount; i++) {
-            const x = Math.random() * particlesAreaSize[0] - particlesAreaSize[0] / 2;
-            const y = Math.random() * particlesAreaSize[1] - particlesAreaSize[1] / 2;
-            const z = Math.random() * particlesAreaSize[2] - particlesAreaSize[2] / 2;
-            if (x > -particleFreeAreaSize[0] / 2 && x < particleFreeAreaSize[0] / 2 &&
-                y > -particleFreeAreaSize[1] / 2 && y < particleFreeAreaSize[1] / 2 &&
-                z > -particleFreeAreaSize[2] / 2 && z < particleFreeAreaSize[2] / 2) {
-                continue;
-            }
-            positions.push(x, y, z);
-            sizes.push(particleSize);
+        const starsCount = 10000;
+        const starsColors = [0x777777,0xaaaaaa,0xffffff];
+        const starsSize = [0.1,0.3,1];
+        const starssAreaSize = [1400, 1400, 1400];
+        const starsFreeAreaSize = [900, 900, 900];
+        const starsMaterials = [
+            new THREE.PointsMaterial({ color: starsColors[0], size: starsSize[0], /*transparent: true*/ }),
+            new THREE.PointsMaterial({ color: starsColors[1], size: starsSize[1], /*transparent: true*/ }),
+            new THREE.PointsMaterial({ color: starsColors[2], size: starsSize[2], /*transparent: true*/ }),
+        ];
+
+        const stars = new THREE.Object3D();
+        for (let i = 0; i < 3; i++) {
+            const starssGeo = this.createStarsParticleGeo(starsCount, starssAreaSize, starsFreeAreaSize, starsSize);
+            const starsMesh = new THREE.Points(starssGeo, starsMaterials[i]);
+            stars.add(starsMesh);
         }
-        particlesGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positions), 3));
-        particlesGeo.setAttribute("size", new THREE.BufferAttribute(new Float32Array(sizes), 1));
 
-        const starsMaterial = new THREE.PointsMaterial({
-            color: particleColor,
-            size: particleSize,
-            //transparent: true
-        });
-        const particles = new THREE.Points(particlesGeo, starsMaterial);
-
-        this.scene.add(particles);
+        this.scene.add(stars);
 
         this.scene.add(hemisphere);
     }
 
+
+    private createStarsParticleGeo(starsCount: number, starssAreaSize: number[], starsFreeAreaSize: number[], starsSize: number[]) {
+        const positions = [];
+        const sizes = [];
+        const starssGeo = new THREE.BufferGeometry();
+        for (let i = 0; i < starsCount; i++) {
+            const x = Math.random() * starssAreaSize[0] - starssAreaSize[0] / 2;
+            const y = Math.random() * starssAreaSize[1] - starssAreaSize[1] / 2;
+            const z = Math.random() * starssAreaSize[2] - starssAreaSize[2] / 2;
+            if (x > -starsFreeAreaSize[0] / 2 && x < starsFreeAreaSize[0] / 2 &&
+                y > -starsFreeAreaSize[1] / 2 && y < starsFreeAreaSize[1] / 2 &&
+                z > -starsFreeAreaSize[2] / 2 && z < starsFreeAreaSize[2] / 2) {
+                continue;
+            }
+            positions.push(x, y, z);
+            sizes.push(starsSize[Math.floor(Math.random() * starsSize.length)]);
+        }
+        starssGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(positions), 3));
+        starssGeo.setAttribute("size", new THREE.BufferAttribute(new Float32Array(sizes), 1));
+        return starssGeo;
+    }
 
     update(deltaTime: number, player: Player) {
         if (!this.moon) return;
@@ -284,12 +293,14 @@ export class World extends THREE.Object3D<WorldEventMap> {
             if(!this.playerHitMoon) {
                 const totalVelocity = player.collisionVelocity;
                 player.position.copy(this.moon.worldToLocal(player.position));
+                if(player.tween) player.tween.stop();
+                //player.lookAt(this.moon.position);
                 player.removeFromParent();
                 this.moon.add(player);
                 this.playerHitMoon = true;
                 console.log("playerHitMoon",totalVelocity);
-                if(totalVelocity > 1.1) {
-                    player.damage(totalVelocity);
+                if(totalVelocity > 0.8) {
+                    player.damage(totalVelocity*7);
                 }
             }
         } else {

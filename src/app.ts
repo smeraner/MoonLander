@@ -110,8 +110,9 @@ export class App {
             if(!this.player) return;
             //check pointer lock
             if(document.pointerLockElement !== this.renderer.domElement) return;
-            this.player.rotation.y -= e.movementX * 0.001;
-            this.player.rotation.x += e.movementY * 0.001;
+            this.player.rotate(e.movementX * 0.001, e.movementY * -0.001);
+            // this.player.rotation.y -= e.movementX * 0.001;
+            // this.player.rotation.x += e.movementY * 0.001;
         });
         window.addEventListener("gamepadconnected", (e) => {
             this.gamepad = e.gamepad;
@@ -390,7 +391,7 @@ export class App {
         }
 
         if (this.keyStates['Space']) {
-            this.player.jump();
+            //this.player.jump();
         }
 
         //touch move
@@ -406,7 +407,7 @@ export class App {
             this.player.velocity.add(this.player.getForwardVector().multiplyScalar(-this.gamepad.axes[1] * speedDelta));
             this.player.velocity.add(this.player.getSideVector().multiplyScalar(this.gamepad.axes[0] * speedDelta));
             if(this.gamepad.buttons[0].pressed) {
-                this.player.jump();
+                //this.player.jump();
             }
         }
 
