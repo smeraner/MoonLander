@@ -276,7 +276,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         this.moon.rotation.y += 0.05 * deltaTime;
 
-        this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100).toFixed(2));
+        this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
         // this.animatedObjects.forEach(object => {
         // });
 
