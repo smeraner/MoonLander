@@ -126,12 +126,17 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.collisionMap.add(this.moon);
 
         const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
+        const earthReflectionTexture = await textureLoader.loadAsync('./textures/earth_reflection.jpg');
+        const earthCloudsTexture = await textureLoader.loadAsync('./textures/earth_clouds.jpg');
         const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
-        const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture });
+        const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, metalnessMap: earthReflectionTexture, roughness: 0.5, metalness: 0.5 });
+        const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.4 });
+        const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01,1.01,1.01), earthAtmosphereMaterial);
         this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
-        this.earth.position.set(700, 0, -100);
+        this.earth.position.set(1800, 0, 700);
         this.earth.castShadow = true;
         this.earth.receiveShadow = true;
+        this.earth.add(earthAtmosphere);
         this.collisionMap.add(this.earth);
 
         this.rebuildOctree();
