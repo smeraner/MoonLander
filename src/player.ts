@@ -5,13 +5,25 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
 
-export class Player extends THREE.Object3D implements DamageableObject {
+export interface PlyerEventMap extends THREE.Object3DEventMap {
+    dead: PlayerDeadEvent;
+    damaged: PlayerDamageEvent;
+}
+
+export interface PlayerDeadEvent extends THREE.Event {
+    type: "dead";
+}
+
+export interface PlayerDamageEvent extends THREE.Event {
+    type: "damaged";
+}
+
+export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableObject {
     static debug = false;
     static model: Promise<any>;
     static smokeTexture: Promise<THREE.Texture>;
     static soundBufferEngine: Promise<AudioBuffer>;
 
-    mixer: THREE.AnimationMixer | undefined;
     model: THREE.Object3D<THREE.Object3DEventMap> | undefined;
     gravity = 0;
     speedOnFloor = 10;
@@ -21,19 +33,19 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
     colliderHeight = .3;
     collider = new Capsule(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, this.colliderHeight, 0), 0.5);
+    colliderMesh: THREE.Mesh<THREE.CapsuleGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>;
+    collisionVelocity: number = 0;
 
     velocity = new THREE.Vector3();
     direction = new THREE.Vector3();
     scene: THREE.Scene;
-    colliderMesh: THREE.Mesh<THREE.CapsuleGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>;
-    health: number = 100;
-    damageMultiplyer: number = 1;
     camera: THREE.Camera;
-    runAction: THREE.AnimationAction | undefined;
-    actions: THREE.AnimationAction[] | undefined;
+    
+    health: number = 100;
+    fuel: number = 100;
+    damageMultiplyer: number = 1;
     score: number = 0;
-    effectMesh: THREE.Mesh | undefined;
-    collisionVelocity: number = 0;
+    
     tweens: TWEEN.Tween<THREE.Euler>[] = [];
     smoke= new THREE.Object3D();
     soundEngine: THREE.PositionalAudio | undefined;
@@ -158,14 +170,21 @@ export class Player extends THREE.Object3D implements DamageableObject {
     }
 
     useEngine(forwardVectorMultiplier: number | null, sideVectorMultiplyer: number | null) {
+        if(this.fuel <= 0) {
+            this.fuel = 0;
+            return;
+        }
+
         if(this.soundEngine && !this.soundEngine.isPlaying) {
             this.soundEngine.play();
         }
         if(sideVectorMultiplyer !== null) {
             this.velocity.add(this.getSideVector().multiplyScalar(sideVectorMultiplyer));
+            this.fuel -= Math.abs(sideVectorMultiplyer);
         }
         if(forwardVectorMultiplier !== null) {
             this.velocity.add(this.getForwardVector().multiplyScalar(forwardVectorMultiplier));
+            this.fuel -= 2*Math.abs(forwardVectorMultiplier);
         }
     }
 
@@ -177,19 +196,13 @@ export class Player extends THREE.Object3D implements DamageableObject {
         if(this.health === 0) return;
         
         this.health -= amount * this.damageMultiplyer;
-        //this.dispatchEvent({type: "damaged", health: this.health} as ActorDamageEvent);
+        this.dispatchEvent({type: "damaged"} as PlayerDamageEvent);
         if (this.health <= 0) {
             this.health = 0;
-            //this.dispatchEvent({type: "dead"} as ActorDeadEvent);
+            this.dispatchEvent({type: "dead"} as PlayerDeadEvent);
             //this.blendDie();
         } else {
             //this.blendHit();
-        }
-        if(this.effectMesh) {
-            this.effectMesh.visible = true;
-            setTimeout(() => {
-                if(this.effectMesh) this.effectMesh.visible = false;
-            }, 1000);
         }
     }
 
@@ -207,7 +220,7 @@ export class Player extends THREE.Object3D implements DamageableObject {
 
             this.collisionVelocity = this.velocity.length();
             this.velocity.multiplyScalar(0);
-            
+
             this.collider.translate(result.normal.multiplyScalar(result.depth));
             this.colliderMesh.position.copy(this.collider.start);
         }
@@ -234,7 +247,6 @@ export class Player extends THREE.Object3D implements DamageableObject {
         this.position.copy(this.collider.end);
 
         this.colliderMesh.visible = Player.debug;
-        if(this.mixer) this.mixer.update(deltaTime);
         TWEEN.update();
     }
 

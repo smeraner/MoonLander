@@ -226,13 +226,14 @@ export class App {
             this.vibrate(1000);
             this.updateHud();
             if(!this.world || !this.player) return;
-            this.player.teleport(this.world.playerSpawnPoint);
             this.world.allLightsOff();
-            this.world.stopWorldAudio();
+            
+            // this.world.stopWorldAudio();
+            // this.player.teleport(this.world.playerSpawnPoint);
 
-            setTimeout(() => {
-                this.restart();
-            }, 3000);
+            // setTimeout(() => {
+            //     this.restart();
+            // }, 3000);
         });
         this.player.addEventListener('damaged', () => {
             this.vibrate(100);
@@ -415,15 +416,17 @@ export class App {
     }
 
     private updateHud(){
-        if(!this.player) return;
+        if(!this.player || !this.world) return;
 
-        let hudText = `-> ${this.player.currentSpeed.toFixed(0)}`;
+        let hudText = ``;
         if(this.player.health === 0) {
             hudText = " ☠ Game over. Refresh to restart.";
         } else {
             hudText += ` ♥ ${this.player.health.toFixed(0)}`;
+            hudText += ` -> ${this.player.currentSpeed.toFixed(0)} m/s`;
+            hudText += ` 🞖 ${this.world.metersToLanding.toFixed(1)} m`;
+            hudText += ` ⛽ ${this.player.fuel.toFixed(1)} %`;
         }
-        hudText += ` 🞖 ${this.world?.metersToLanding.toFixed(1)} m`;
 
         this.updateInstructionText(hudText);
     }
