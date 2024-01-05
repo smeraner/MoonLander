@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { DotScreenShader } from 'three/addons/shaders/DotScreenShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import Stats from 'three/addons/libs/stats.module.js';
@@ -243,7 +243,6 @@ export class App {
 
         /*
         this.bloomLayer.set( App.BLOOM_SCENE );
-        const renderScene = new RenderPass( this.scene, this.camera );
 
         const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
         bloomPass.threshold = 0;
@@ -253,42 +252,67 @@ export class App {
         this.bloomComposer = new EffectComposer( this.renderer );
         this.bloomComposer.renderToScreen = false;
         this.bloomComposer.addPass( renderScene );
-        this.bloomComposer.addPass( bloomPass );
+        this.bloomComposer.addPass( bloomPass );*/
 
-        const mixPass = new ShaderPass(
-            new THREE.ShaderMaterial( {
-                uniforms: {
-                    baseTexture: { value: null },
-                    bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                    }`,
-                fragmentShader: `
-                    uniform sampler2D baseTexture;
-                    uniform sampler2D bloomTexture;
+        const renderScene = new RenderPass( this.scene, this.camera );
+        // const mixPass = new ShaderPass(LuminosityShader);
+        //     new THREE.ShaderMaterial( {
+        //         uniforms: {
+        //             baseTexture: { value: null },
+        //             bloomTexture: { value: this.bloomComposer.renderTarget2.texture }
+        //         },
+        //         vertexShader: `
+        //             varying vec2 vUv;
+        //             void main() {
+        //                 vUv = uv;
+        //                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        //             }`,
+        //         fragmentShader: `
+        //             uniform sampler2D baseTexture;
+        //             uniform sampler2D bloomTexture;
         
-                    varying vec2 vUv;
+        //             varying vec2 vUv;
         
-                    void main() {
+        //             void main() {
         
-                        gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
+        //                 gl_FragColor = ( texture2D( baseTexture, vUv ) + vec4( 1.0 ) * texture2D( bloomTexture, vUv ) );
         
-                    }`,
-                defines: {}
-            } ), 'baseTexture'
-        );
-        mixPass.needsSwap = true;
+        //             }
+        //             float warp = 0.75; // simulate curvature of CRT monitor
+        //             float scan = 0.75; // simulate darkness between scanlines
+                    
+        //             void mainImage(out vec4 fragColor,in vec2 fragCoord)
+        //             {
+        //             // squared distance from center
+        //             vec2 uv = fragCoord/iResolution.xy;
+        //             vec2 dc = abs(0.5-uv);
+        //             dc *= dc;
+                    
+        //             // warp the fragment coordinates
+        //             uv.x -= 0.5; uv.x *= 1.0+(dc.y*(0.3*warp)); uv.x += 0.5;
+        //             uv.y -= 0.5; uv.y *= 1.0+(dc.x*(0.4*warp)); uv.y += 0.5;
+                
+        //             // sample inside boundaries, otherwise set to black
+        //             if (uv.y > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0)
+        //                 fragColor = vec4(0.0,0.0,0.0,1.0);
+        //             else
+        //                 {
+        //                 // determine if we are drawing in a scanline
+        //                 float apply = abs(sin(fragCoord.y)*0.5*scan);
+        //                 // sample the texture
+        //                 fragColor = vec4(mix(texture(iChannel0,uv).rgb,vec3(0.0),apply),1.0);
+        //                 }
+        //             }`,
+        //         defines: {}
+        //     } ), 'baseTexture'
+        // );
+        // mixPass.needsSwap = true;
 
         const outputPass = new OutputPass();
 
-        this.finalComposer = new EffectComposer( this.renderer );
-        this.finalComposer.addPass( renderScene );
-        this.finalComposer.addPass( mixPass );
-        this.finalComposer.addPass( outputPass );*/
+        // this.finalComposer = new EffectComposer( this.renderer );
+        // this.finalComposer.addPass( renderScene );
+        // this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
 
@@ -427,13 +451,15 @@ export class App {
     }
 
     private updateInstructionText(text: string): void {
-        if(!this.player || !this.camera) return;
+        const hud = document.getElementById('hud');
+        if(hud) hud.innerHTML = text;
+        // if(!this.player || !this.camera) return;
 
-        this.camera.remove(this.instructionText);
-        this.instructionText = createText(text, 0.04);
-        this.instructionText.position.set(0,0.1,-0.2);
-        this.instructionText.scale.set(0.3,0.3,0.3);
-        this.camera.add(this.instructionText);
+        // this.camera.remove(this.instructionText);
+        // this.instructionText = createText(text, 0.04);
+        // this.instructionText.position.set(0,0.1,-0.2);
+        // this.instructionText.scale.set(0.3,0.3,0.3);
+        // this.camera.add(this.instructionText);
     }
 
     private teleportPlayerIfOob(): void {
@@ -467,14 +493,14 @@ export class App {
     render() {
         if(!this.scene || !this.camera) return;
 
-        if(!this.bloomComposer || !this.finalComposer){
+        if(!this.finalComposer){
             this.renderer.render(this.scene, this.camera);
             return;
         }
 
-        this.scene.traverse( this.darkenNonBloomed.bind(this) );
-        this.bloomComposer.render();
-        this.scene.traverse( this.restoreMaterial.bind(this) );
+        // this.scene.traverse( this.darkenNonBloomed.bind(this) );
+        // this.bloomComposer.render();
+        // this.scene.traverse( this.restoreMaterial.bind(this) );
 
         // render the entire scene, then render bloom scene on top
         this.finalComposer.render();
