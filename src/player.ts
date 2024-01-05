@@ -198,6 +198,7 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.dispatchEvent({type: "damaged"} as PlayerDamageEvent);
         if (this.health <= 0) {
             this.health = 0;
+            this.fuel = 0;
             this.dispatchEvent({type: "dead"} as PlayerDeadEvent);
             //this.blendDie();
         } else {

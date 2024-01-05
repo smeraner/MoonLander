@@ -118,6 +118,13 @@ export class App {
             this.gamepad.buttons.length, this.gamepad.axes.length);
         });
 
+        setTimeout(() => {
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyPass);
+            if(pass) {
+                pass.enabled = false;
+            }
+        }, 5000);
+
     }
 
     hanldeTouch(e: TouchEvent) {

@@ -61,7 +61,6 @@ void main() {
     gl_FragColor = color;
 }`,
         }), 'iChannel0' );
-        console.log( this.material.fragmentShader );
         this.needsSwap = true;
     }
 
