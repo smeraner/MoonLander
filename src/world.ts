@@ -26,8 +26,6 @@ export interface WorldLevelUpEvent extends THREE.Event {
     type: 'levelUp';
 }
 
-type Weather = 'rain' | 'snow' | 'none';
-
 export class World extends THREE.Object3D<WorldEventMap> {
 
     static debug = false;
@@ -46,10 +44,10 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
     gui: GUI;
     playerSpawnPoint: THREE.Vector3;
-    scene: THREE.Scene | undefined;
+    scene= new THREE.Scene();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
-    collisionMap: THREE.Object3D<THREE.Object3DEventMap> | undefined;
+    collisionMap = new THREE.Object3D();
     helper: OctreeHelper | undefined;
     animatedObjects: THREE.Object3D[] = [];
     private moon: THREE.Mesh | undefined;
@@ -102,30 +100,44 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     async loadScene(): Promise<THREE.Scene> {
-        this.scene = new THREE.Scene();
+        //load scene
+        const { earth, moon } = await this.buildEarthMoonScene(this.collisionMap);
+        this.moon = moon;
+        this.earth = earth;
+        this.buildHemisphere();
 
-        //load texture
+        this.scene.add(this.collisionMap);
+
+        //build collision octree
+        this.rebuildOctree();
+        const helper = new OctreeHelper(this.worldOctree);
+        helper.visible = false;
+        this.scene.add(helper);
+        this.helper = helper;
+
+        return this.scene;
+    }
+
+    private async buildEarthMoonScene(collisionMap: THREE.Object3D) {
         const textureLoader = new THREE.TextureLoader();
         const moonTexture = await textureLoader.loadAsync('./textures/moon.jpg');
         const moonNormalTexture = await textureLoader.loadAsync('./textures/moon_normal.jpg');
 
-        this.collisionMap = new THREE.Object3D();
-
-        const moonMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
-            map: moonTexture, 
-            displacementMap: moonTexture, 
+        const moonMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: moonTexture,
+            displacementMap: moonTexture,
             displacementScale: 0.2,
             normalMap: moonNormalTexture,
             normalScale: new THREE.Vector2(0.3, 0.3)
-         });
+        });
 
         const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
-        this.moon = new THREE.Mesh(moonGeometry, moonMaterial);
-        this.moon.castShadow = true;
-        this.moon.receiveShadow = true;
-        this.moon.layers.enable(1); //bloom layer
-        this.collisionMap.add(this.moon);
+        const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+        moon.castShadow = true;
+        moon.receiveShadow = true;
+        moon.layers.enable(1); //bloom layer
+        collisionMap.add(moon);
 
         const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
         const earthReflectionTexture = await textureLoader.loadAsync('./textures/earth_reflection.jpg');
@@ -133,24 +145,13 @@ export class World extends THREE.Object3D<WorldEventMap> {
         const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
         const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, metalnessMap: earthReflectionTexture, roughness: 0.5, metalness: 0.5 });
         const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.5 });
-        const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01,1.01,1.01), earthAtmosphereMaterial);
-        this.earth = new THREE.Mesh(earthGeometry, earthMaterial);
-        this.earth.position.set(1800, 0, 700);
-        this.earth.add(earthAtmosphere);
-        this.collisionMap.add(this.earth);
+        const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01, 1.01, 1.01), earthAtmosphereMaterial);
+        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+        earth.position.set(1800, 0, 700);
+        earth.add(earthAtmosphere);
+        collisionMap.add(earth);
 
-        this.rebuildOctree();
-
-        this.scene.add(this.collisionMap);
-
-        this.addHemisphere();
-
-        const helper = new OctreeHelper(this.worldOctree);
-        helper.visible = false;
-        this.scene.add(helper);
-        this.helper = helper;
-
-        return this.scene;
+        return { moon: moon, earth: earth };
     }
 
     reset() {
@@ -160,8 +161,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     allLightsOff() {
-        if (!this.scene) return;
-
         this.scene.traverse(child => {
             if ((child as THREE.Light).isLight) {
                 child.visible = false;
@@ -170,8 +169,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     allLightsOn() {
-        if (!this.scene) return;
-
         this.scene.traverse(child => {
             if ((child as THREE.Light).isLight) {
                 child.visible = true;
@@ -180,8 +177,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     addFog() {
-        if (!this.scene) return;
-
         this.scene.fog = new THREE.Fog(0xffffff, 10, 35);
     }
 
@@ -189,8 +184,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         return 1;
     }
 
-    async addHemisphere() {
-        if (!this.scene) return;
+    async buildHemisphere() {
 
         //check if scene has hemisphere
         let hemisphere = this.scene.getObjectByName("Hemisphere");
@@ -257,7 +251,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
             this.stars.add(starsMesh);
         }
 
-        this.scene.add(this.stars);
+        hemisphere.add(this.stars);
 
         this.scene.add(hemisphere);
     }
