@@ -235,7 +235,7 @@ export class App {
         });
         this.player.addEventListener('damaged', () => {
             this.vibrate(100);
-            this.blendHit();
+            this.fadeHit();
             this.updateHud();
         });
         this.scene.add(this.player);
@@ -320,39 +320,36 @@ export class App {
         } 
     }
 
-    blendHit() {
-        if(!this.filterMesh) return;
-        this.filterMesh.material.color.setHex(0xff0000);
-        this.filterMesh.material.opacity = 0.35;
-        this.filterMesh.visible = true;
-        setTimeout(() => {
-            if(!this.filterMesh) return;
-            this.filterMesh.visible = false;
-        }, 200);
+    fadeHit() {
+        this.fade(0xff0000, 0, 200);
     }
 
-    blendDie() {
-        if(!this.filterMesh) return;
-        this.filterMesh.material.color.setHex(0xff0000);
-        this.filterMesh.material.opacity = 1;
-        this.filterMesh.visible = true;
+    fadeDie() {
+        this.fade(0xff0000, 1, 1000);
     }
 
-    blendBlack() {
-        if(!this.filterMesh) return;
-        this.filterMesh.material.color.setHex(0x000000);
-        this.filterMesh.material.opacity = 1;
-        this.filterMesh.visible = true;
+    fadeBlack(ms = 1000) {
+        this.fade(0x000000, 1, ms);
     }
 
-    blendClear() {
+    fadeClear(ms = 1000) {
+        this.fade(0x00000000, 0, ms);
+    }
+
+    fade(color = 0x000000, direction = 1, ms = 1000) {
         if(!this.filterMesh) return;
-        this.filterMesh.visible = false;
+        this.filterMesh.material.color.setHex(color);
+        this.filterMesh.material.opacity = direction? 0 : 1;
+        this.filterMesh.visible = true;
+        return new TWEEN.Tween(this.filterMesh.material)
+            .to({opacity: direction}, ms)
+            .onComplete(() => { if(this.filterMesh) this.filterMesh.visible = direction? true : false;})
+            .start();
     }
 
     displayWinMessage() {
         if(!this.player || !this.world) return;
-        this.blendBlack();
+        this.fadeBlack();
         this.updateInstructionText("You win! Reload to restart.");
         this.world.allLightsOff();
         this.world.stopWorldAudio();
