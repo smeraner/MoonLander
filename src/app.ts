@@ -2,16 +2,15 @@ import * as THREE from 'three';
 import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { DotScreenShader } from 'three/addons/shaders/DotScreenShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import { createText } from 'three/addons/webxr/Text2D.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { Player } from './player';
 import { World } from './world';
+import { ShaderToyPass } from './ShaderToyPass';
+import { ShaderToyCrt } from './ShaderToyCrt';
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -253,58 +252,16 @@ export class App {
         this.bloomComposer = new EffectComposer( this.renderer );
         this.bloomComposer.renderToScreen = false;
         this.bloomComposer.addPass( renderScene );
-        this.bloomComposer.addPass( bloomPass );*/
+        this.bloomComposer.addPass( bloomPass );
+        */
+
+        const crtPass = new ShaderToyCrt(this.renderer);
 
         const renderScene = new RenderPass( this.scene, this.camera );
-        const mixPass = new ShaderPass(
-            new THREE.ShaderMaterial( {
-                uniforms: {
-                    baseTexture: { value: null },
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    void main() {
-                        vUv = uv;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                    }`,
-                fragmentShader: /* glsl */`
-                    uniform sampler2D baseTexture;
-                    varying vec2 vUv;
-        
-                    float warp = 0.75; // simulate curvature of CRT monitor
-                    float scan = 0.75; // simulate darkness between scanlines
-                    
-                    void main()
-                    {
-                        // squared distance from center
-                        vec2 uv = vUv;
-                        vec2 dc = abs(0.5-uv);
-                        dc *= dc;
-                        
-                        // warp the fragment coordinates
-                        uv.x -= 0.5; uv.x *= 1.0+(dc.y*(0.3*warp)); uv.x += 0.5;
-                        uv.y -= 0.5; uv.y *= 1.0+(dc.x*(0.4*warp)); uv.y += 0.5;
-                    
-                        // sample inside boundaries, otherwise set to black
-                        if (uv.y > 1.0 || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0)
-                            gl_FragColor = vec4(0.0,0.0,0.0,1.0);
-                        else
-                            {
-                            // determine if we are drawing in a scanline
-                            float apply = abs(sin(gl_FragCoord.y)*0.5*scan);
-                            // sample the texture
-                            gl_FragColor = vec4(mix(texture(baseTexture,uv).rgb,vec3(0.0),apply),1.0);
-                            }
-                    }`,
-            }), 'baseTexture'
-        );
-        mixPass.needsSwap = true;
-
         const outputPass = new OutputPass();
-
         this.finalComposer = new EffectComposer( this.renderer );
         this.finalComposer.addPass( renderScene );
-        this.finalComposer.addPass( mixPass );
+        this.finalComposer.addPass( crtPass );
         this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
