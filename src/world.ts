@@ -7,6 +7,9 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OctreeHelper } from 'three/addons/helpers/OctreeHelper.js';
 import { Octree } from 'three/addons/math/Octree.js';
 import { Player } from './player';
+import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
+import { WorldScene } from './worldScene';
+import { WorldSceneWormhole } from './worldSceneWormhole';
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('./draco/');
@@ -26,12 +29,13 @@ export interface WorldLevelUpEvent extends THREE.Event {
     type: 'levelUp';
 }
 
+type worldSceneName = "MoonEarth" | "DeepSpace" | "Wormhole";
+
 export class World extends THREE.Object3D<WorldEventMap> {
 
     static debug = false;
     static soundBufferAmbient: Promise<AudioBuffer>;
     static model: Promise<THREE.Object3D>; 
-    lightShadowMapViewer: ShadowMapViewer | undefined;
     static initialize() {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
@@ -40,18 +44,17 @@ export class World extends THREE.Object3D<WorldEventMap> {
         // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
 
+    worldScene: WorldScene | undefined;
     worldOctree = new Octree();
 
     gui: GUI;
     playerSpawnPoint: THREE.Vector3;
     scene= new THREE.Scene();
+    worldContainer = new THREE.Group();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
     collisionMap = new THREE.Object3D();
     helper: OctreeHelper | undefined;
-    animatedObjects: THREE.Object3D[] = [];
-    private moon: THREE.Mesh | undefined;
-    private earth: THREE.Mesh | undefined;
     private stars: THREE.Object3D<THREE.Object3DEventMap> | undefined;
     public metersToLanding: number = 0;
     public playerHitMoon: boolean = false;
@@ -99,14 +102,30 @@ export class World extends THREE.Object3D<WorldEventMap> {
         }
     }
 
-    async loadScene(): Promise<THREE.Scene> {
-        //load scene
-        const { earth, moon } = await this.buildEarthMoonScene(this.collisionMap);
-        this.moon = moon;
-        this.earth = earth;
-        this.buildHemisphere();
+    async loadScene(worldSceneName: worldSceneName = "MoonEarth"): Promise<THREE.Scene> {
+        //clean scene
+        this.cleanScene();
 
-        this.scene.add(this.collisionMap);
+        switch (worldSceneName) {
+            case "MoonEarth":
+                this.worldScene = new WorldSceneMoonEarth();
+                break;
+            case "Wormhole":
+                this.worldScene = new WorldSceneWormhole();
+                break;
+            case "DeepSpace":
+                // this.worldScene = new WorldSceneDeepSpace();
+                break;
+        }
+        
+        if (!this.worldScene) throw new Error("worldScene not found");
+        const { collisionMap, scene } = await this.worldScene.build(this);
+        this.collisionMap = collisionMap;
+        
+        this.worldContainer.add(this.collisionMap);
+        this.worldContainer.add(scene);
+
+        this.scene.add(this.worldContainer);
 
         //build collision octree
         this.rebuildOctree();
@@ -118,40 +137,14 @@ export class World extends THREE.Object3D<WorldEventMap> {
         return this.scene;
     }
 
-    private async buildEarthMoonScene(collisionMap: THREE.Object3D) {
-        const textureLoader = new THREE.TextureLoader();
-        const moonTexture = await textureLoader.loadAsync('./textures/moon.jpg');
-        const moonNormalTexture = await textureLoader.loadAsync('./textures/moon_normal.jpg');
-
-        const moonMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            map: moonTexture,
-            displacementMap: moonTexture,
-            displacementScale: 0.2,
-            normalMap: moonNormalTexture,
-            normalScale: new THREE.Vector2(0.3, 0.3)
+    private cleanScene() {
+        const objectsToRemove: THREE.Object3D[] = [];
+        this.worldContainer.traverse(child => {
+            objectsToRemove.push(child);
         });
-
-        const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
-        const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-        moon.castShadow = true;
-        moon.receiveShadow = true;
-        moon.layers.enable(1); //bloom layer
-        collisionMap.add(moon);
-
-        const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
-        const earthReflectionTexture = await textureLoader.loadAsync('./textures/earth_reflection.jpg');
-        const earthCloudsTexture = await textureLoader.loadAsync('./textures/earth_clouds.jpg');
-        const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
-        const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, metalnessMap: earthReflectionTexture, roughness: 0.5, metalness: 0.5 });
-        const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.5 });
-        const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01, 1.01, 1.01), earthAtmosphereMaterial);
-        const earth = new THREE.Mesh(earthGeometry, earthMaterial);
-        earth.position.set(1800, 0, 700);
-        earth.add(earthAtmosphere);
-        collisionMap.add(earth);
-
-        return { moon: moon, earth: earth };
+        objectsToRemove.forEach(child => {
+            child.removeFromParent();
+        });
     }
 
     reset() {
@@ -279,74 +272,11 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     update(deltaTime: number, player: Player) {
-        if (!this.moon ||!this.earth) return;
 
-        this.moon.rotation.y += 0.03 * deltaTime;
-
-        this.earth.rotation.y += 0.01 * deltaTime;
-
-        // this.animatedObjects.forEach(object => {
-        // });
-
-        // gravity player to moon 1,62 m/s²
-        const moonGlobalPosition = new THREE.Vector3();
-        this.moon.getWorldPosition(moonGlobalPosition);
-        const moonGravity = 1.62 * 50;
-        const distanceToMoon = player.position.distanceTo(moonGlobalPosition);
-        const gravityForce = moonGravity * (1 / distanceToMoon);
-        player.velocity.addScaledVector(moonGlobalPosition.sub(player.position).normalize(), gravityForce * deltaTime);
-
-        //check if player is on moon
-        if(player.onFloor) {
-            this.metersToLanding = 0;
-            //first time player hits moon
-            if(!this.playerHitMoon) {
-                this.playerHitMoon = true;
-                player.smoke.visible = false;
-                player.tweens.forEach(tween => tween.stop());
-                
-                //attach player from sceen to moon                
-                player.position.copy(this.moon.worldToLocal(player.position));
-                player.removeFromParent();
-                this.moon.add(player);
-
-                const totalVelocity = player.collisionVelocity;
-                console.log("playerHitMoon",totalVelocity);
-                if(totalVelocity > 0.8) {
-                    player.damage(totalVelocity*10);
-                }
-            }
-        } else {
-            this.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
-
-            //player left the moon
-            if(this.playerHitMoon && this.scene) {
-                this.playerHitMoon = false;
-                player.tweens.forEach(tween => tween.start());
-
-                //detach player from moon back to scene
-                player.position.copy(this.moon.localToWorld(player.position));
-                player.removeFromParent();
-                this.scene.add(player);
-            }
-            if(this.metersToLanding < 200) {
-                player.smoke.visible = true;
-            } else {
-                player.smoke.visible = false;
-            }
-        }
+        if(this.worldScene) this.worldScene.update(deltaTime, this, player);
 
         //stars follow player
         if(this.stars) this.stars.position.copy(player.position);
-
-        //check if player is near placeholder
-        this.checkPlayerCollision(player);
-
-    }
-
-    private checkPlayerCollision(player: Player) {
-        const playerGlobalPosition = new THREE.Vector3();
-        player.getWorldPosition(playerGlobalPosition);
 
     }
 
