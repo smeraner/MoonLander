@@ -206,8 +206,12 @@ export class App {
         //init world
         this.world = new World(this.audioListenerPromise, App.gui);
         this.world.addEventListener('needHudUpdate', () => this.updateHud());
-        this.world.addEventListener('collect', () => {
-            this.vibrate(100);
+        this.world.addEventListener('levelUp', async () => {
+            await this.fadeBlack();
+            this.vibrate(1000);
+            this.world?.loadScene("Wormhole");
+            this.fadeClear();
+            
         });
         this.scene = await this.world.loadScene();
 
@@ -301,20 +305,20 @@ export class App {
         } 
     }
 
-    fadeHit() {
-        this.fade(0xff0000, 0, 200);
+    async fadeHit() {
+        return this.fade(0xff0000, 0, 200);
     }
 
-    fadeDie() {
-        this.fade(0xff0000, 1, 1000);
+    async fadeDie() {
+        return this.fade(0xff0000, 1, 1000);
     }
 
-    fadeBlack(ms = 1000) {
-        this.fade(0x000000, 1, ms);
+    async fadeBlack(ms = 1000) {
+        return this.fade(0x000000, 1, ms);
     }
 
-    fadeClear(ms = 1000, from = 0x00000000) {
-        this.fade(from, 0, ms);
+    async fadeClear(ms = 1000, from = 0x00000000) {
+        return this.fade(from, 0, ms);
     }
 
     fade(color = 0x000000, direction = 1, ms = 1000) {
@@ -322,10 +326,14 @@ export class App {
         this.filterMesh.material.color.setHex(color);
         this.filterMesh.material.opacity = direction? 0 : 1;
         this.filterMesh.visible = true;
-        return new TWEEN.Tween(this.filterMesh.material)
-            .to({opacity: direction}, ms)
-            .onComplete(() => { if(this.filterMesh) this.filterMesh.visible = direction? true : false;})
-            .start();
+        return new Promise((resolve) => {
+            if(this.filterMesh)
+                new TWEEN.Tween(this.filterMesh.material)
+                .to({opacity: direction}, ms)
+                .onComplete(() => { if(this.filterMesh) this.filterMesh.visible = direction? true : false;})
+                .onComplete(() => resolve(true))
+                .start();
+        });
     }
 
     displayWinMessage() {

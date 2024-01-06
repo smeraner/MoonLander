@@ -5,7 +5,7 @@ import { WorldScene } from "./worldScene";
 import { TorusKnot } from "three/examples/jsm/curves/CurveExtras.js";
 
 
-export class WorldSceneWormhole implements WorldScene {
+export class WorldSceneWormhole extends THREE.Object3D implements WorldScene {
 
     playerPositionIndex: number = 0;
     speed: number = 4500;
@@ -13,7 +13,6 @@ export class WorldSceneWormhole implements WorldScene {
 
     async build(world: World) {
         const collisionMap = new THREE.Object3D();
-        const scene = new THREE.Object3D();
 
         //load texture
         const textureLoader = new THREE.TextureLoader();
@@ -28,16 +27,16 @@ export class WorldSceneWormhole implements WorldScene {
         })
         const wormholeGeometry = new THREE.TubeGeometry(this.torusKnotpath, 800, 5, 12, true);
         const wormholeTubeMesh = new THREE.Mesh( wormholeGeometry, wormholeMaterial );
-        scene.add(wormholeTubeMesh);
+        this.add(wormholeTubeMesh);
 
         //directional light
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
         directionalLight.position.set(-800, 0, 0);
-        scene.add(directionalLight);
+        this.add(directionalLight);
 
         //world.buildHemisphere();
 
-        return {collisionMap, scene};
+        return collisionMap;
     }
 
 
