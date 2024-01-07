@@ -119,9 +119,12 @@ export class App {
         });
 
         setTimeout(() => {
-            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyPass);
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyPass) as ShaderToyPass;
             if(pass) {
-                pass.enabled = false;
+                new TWEEN.Tween(pass.uniforms)
+                    .to({warp:{value: 0}, scan:{value:0}}, 5000)
+                    .onComplete(() => { if(pass) pass.enabled = false;})
+                    .start();
             }
         }, 5000);
 
@@ -266,7 +269,10 @@ export class App {
         this.bloomComposer.addPass( bloomPass );
         */
 
-        const crtPass = new ShaderToyCrt(this.renderer);
+        const crtPass = new ShaderToyCrt(this.renderer, {
+            warp: { value: 0.95 },
+            scan: { value: 0.95 }
+        });
 
         const renderScene = new RenderPass( this.scene, this.camera );
         const outputPass = new OutputPass();
@@ -449,7 +455,7 @@ export class App {
         }
 
         this.orbitVontrols?.update(deltaTime);
-        TWEEN.update(deltaTime);
+        TWEEN.update();
         this.stats.update();
 
         this.render();
