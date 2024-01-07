@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { ShaderToyPass } from "./ShaderToyPass";
-const clock = new THREE.Clock();
 
 export class ShaderToyCrtUniforms {
     warp= { value: 0.85 };
@@ -45,8 +44,4 @@ export class ShaderToyCrt extends ShaderToyPass {
             });
     }
 
-    render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean) {
-        this.uniforms.iTime.value += clock.getDelta();
-        super.render(renderer, writeBuffer, readBuffer, deltaTime, maskActive);
-    }
 }
