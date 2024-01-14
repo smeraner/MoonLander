@@ -12,6 +12,10 @@ import { World } from './world';
 import { ShaderToyPass } from './ShaderToyPass';
 import { ShaderToyCrt } from './ShaderToyCrt';
 import { ShaderToyInterstellar } from './ShaderToyInterstellar';
+import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
+import { WorldSceneWormhole } from './worldSceneWormhole';
+import { WorldSceneStars } from './worldSceneStars';
+import { WorldSceneDeepSpace } from './worldSceneDeepSpace';
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -211,13 +215,27 @@ export class App {
         this.world = new World(this.audioListenerPromise, App.gui);
         this.world.addEventListener('needHudUpdate', () => this.updateHud());
         this.world.addEventListener('levelUp', async () => {
-            await this.fadeBlack();
-            this.vibrate(1000);
-            this.world?.loadScene("Wormhole");
-            this.fadeClear();
+            if(!this.world || !this.player) return;
+
+            if(this.world.worldScene instanceof WorldSceneMoonEarth) {
+                await this.fadeBlack(500);
+                this.world.stopWorldAudio();
+                this.vibrate(8000);
+                this.world.loadScene(new WorldSceneWormhole()); 
+                this.fadeClear(500, 0xffffff);
+            } else if(this.world.worldScene instanceof WorldSceneWormhole) {
+                this.fade(0xffffff, 0, 500);
+                this.world.stopWorldAudio();
+                this.player.teleport(this.world.playerSpawnPoint);
+                this.world.allLightsOff();
+                this.world.loadScene(new WorldSceneDeepSpace());
+                this.fadeClear();
+                return;
+            }
+
             
         });
-        this.scene = await this.world.loadScene();
+        this.scene = await this.world.loadScene(new WorldSceneMoonEarth());
 
         let fov = 70;
         this.camera = new THREE.PerspectiveCamera(

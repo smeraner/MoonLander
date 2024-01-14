@@ -28,8 +28,6 @@ export interface WorldLevelUpEvent extends THREE.Event {
     type: 'levelUp';
 }
 
-type worldSceneName = "MoonEarth" | "DeepSpace" | "Wormhole";
-
 export class World extends THREE.Object3D<WorldEventMap> {
 
     static debug = false;
@@ -99,27 +97,19 @@ export class World extends THREE.Object3D<WorldEventMap> {
         }
     }
 
-    async loadScene(worldSceneName: worldSceneName = "MoonEarth"): Promise<THREE.Scene> {
+    async loadScene(worldScene: WorldScene = new WorldSceneMoonEarth): Promise<THREE.Scene> {
         //clean scene
         this.cleanScene();
 
-        switch (worldSceneName) {
-            case "MoonEarth":
-                const wsc = new WorldSceneMoonEarth();
-                wsc.addEventListener("success", () => {
-                    this.dispatchEvent({ type: "levelUp" } as WorldLevelUpEvent);
-                });
-                this.worldScene = wsc;
-                break;
-            case "Wormhole":
-                this.worldScene = new WorldSceneWormhole();
-                break;
-            case "DeepSpace":
-                // this.worldScene = new WorldSceneDeepSpace();
-                break;
-        }
+        //load scene
+        this.worldScene = worldScene;
         
         if (!this.worldScene) throw new Error("worldScene not found");
+        
+        this.worldScene.addEventListener("success", () => {
+            this.dispatchEvent({ type: "levelUp" } as WorldLevelUpEvent);
+        });
+
         this.collisionMap = await this.worldScene.build(this);
 
         this.scene.add(this.worldScene);

@@ -4,8 +4,15 @@ import { World } from "./world";
 import { WorldScene } from "./worldScene";
 import { TorusKnot } from "three/examples/jsm/curves/CurveExtras.js";
 
+export interface WorldSceneWormholeEventMap extends THREE.Object3DEventMap {
+    success: WorldSceneWormholeSuccessEvent;
+}
 
-export class WorldSceneWormhole extends THREE.Object3D implements WorldScene {
+export interface WorldSceneWormholeSuccessEvent extends THREE.Event {
+    type: "success";
+}
+
+export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMap> implements WorldScene {
 
     playerPositionIndex: number = 0;
     speed: number = 4500;
@@ -35,6 +42,9 @@ export class WorldSceneWormhole extends THREE.Object3D implements WorldScene {
         this.add(directionalLight);
 
         //world.buildHemisphere();
+        setTimeout(() => { // wait for bounce animation
+            this.dispatchEvent({ type: "success" } as WorldSceneWormholeSuccessEvent);
+        }, 7000);
 
         return collisionMap;
     }
