@@ -11,6 +11,7 @@ import { Player } from './player';
 import { World } from './world';
 import { ShaderToyPass } from './ShaderToyPass';
 import { ShaderToyCrt } from './ShaderToyCrt';
+import { ShaderToyInterstellar } from './ShaderToyInterstellar';
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -274,11 +275,14 @@ export class App {
             scan: { value: 0.95 }
         });
 
+        //const interStellarPass = new ShaderToyInterstellar(this.renderer);
+
         const renderScene = new RenderPass( this.scene, this.camera );
         const outputPass = new OutputPass();
         this.finalComposer = new EffectComposer( this.renderer );
         this.finalComposer.addPass( renderScene );
         this.finalComposer.addPass( crtPass );
+        //this.finalComposer.addPass( interStellarPass );
         this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
