@@ -12,7 +12,7 @@ export interface WorldSceneStarsSuccessEvent extends THREE.Event {
     type: "success";
 }
 
-export class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEventMap> implements WorldScene {
+export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEventMap> {
 
     private stars: THREE.Object3D<THREE.Object3DEventMap> | undefined;
 

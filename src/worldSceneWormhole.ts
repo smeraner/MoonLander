@@ -14,6 +14,22 @@ export interface WorldSceneWormholeSuccessEvent extends THREE.Event {
 
 export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMap> implements WorldScene {
 
+    static soundBufferAmbient: Promise<AudioBuffer>;
+    static initialize() {
+        //load audio     
+        const audioLoader = new THREE.AudioLoader();
+        WorldSceneWormhole.soundBufferAmbient = audioLoader.loadAsync('./sounds/warp-ambient.mp3');
+
+        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
+    }
+    soundBufferAmbient: Promise<AudioBuffer>;
+
+    constructor() {
+        super();
+        this.soundBufferAmbient = WorldSceneWormhole.soundBufferAmbient;
+    }
+
+
     playerPositionIndex: number = 0;
     speed: number = 4500;
     torusKnotpath = new TorusKnot();
@@ -63,4 +79,5 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
     }
 
 }
+WorldSceneWormhole.initialize();
 

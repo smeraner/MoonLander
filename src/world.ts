@@ -32,7 +32,6 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
     static debug = false;
     static soundBufferAmbient: Promise<AudioBuffer>;
-    static model: Promise<THREE.Object3D>; 
     static initialize() {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
@@ -53,6 +52,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     helper: OctreeHelper | undefined;
     public metersToLanding: number = 0;
     public playerHitMoon: boolean = false;
+    audioListenerPromise: Promise<THREE.AudioListener>;
 
     /**
      * @param {Promise<THREE.AudioListener>} audioListenerPromise
@@ -63,19 +63,19 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         this.gui = gui;
         this.playerSpawnPoint = new THREE.Vector3(0, 3, -200);
+        this.audioListenerPromise = audioListenerPromise;
 
         setInterval(() => {
             this.dispatchEvent({ type: 'needHudUpdate' } as WorldNeedHudUpdateEvent);
         }, 200);
-
-        this.initAudio(audioListenerPromise);
     }
 
-    async initAudio(audioListenerPromise: Promise<THREE.AudioListener>) {
-        const audioListener = await audioListenerPromise;
-        const soundBufferAmbient = await World.soundBufferAmbient;
+    async initAudio(soundBufferAmbient: Promise<AudioBuffer>) {
+        const audioListener = await this.audioListenerPromise;
+        if(this.soundAmbient && this.soundAmbient.isPlaying) this.soundAmbient.stop();
+
         this.soundAmbient = new THREE.Audio(audioListener);
-        this.soundAmbient.setBuffer(soundBufferAmbient);
+        this.soundAmbient.setBuffer(await soundBufferAmbient);
         this.soundAmbient.setVolume(1);
 
         this.playWorldAudio();
@@ -97,7 +97,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         }
     }
 
-    async loadScene(worldScene: WorldScene = new WorldSceneMoonEarth): Promise<THREE.Scene> {
+    async loadScene(worldScene: WorldScene =new WorldSceneMoonEarth()): Promise<THREE.Scene> {
         //clean scene
         this.cleanScene();
 
@@ -105,7 +105,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
         this.worldScene = worldScene;
         
         if (!this.worldScene) throw new Error("worldScene not found");
-        
+        this.initAudio(this.worldScene.soundBufferAmbient);
+
         this.worldScene.addEventListener("success", () => {
             this.dispatchEvent({ type: "levelUp" } as WorldLevelUpEvent);
         });

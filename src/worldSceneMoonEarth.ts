@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
 import { Player } from './player';
 import { World } from './world';
 import { WorldScene } from './worldScene';
@@ -8,8 +7,24 @@ import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars'
 
 export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
+
+    static soundBufferAmbient: Promise<AudioBuffer>;
+    static initialize() {
+        //load audio     
+        const audioLoader = new THREE.AudioLoader();
+        WorldSceneMoonEarth.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.ogg');
+
+        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
+    }
+
     moon: THREE.Mesh | undefined;
     earth: THREE.Mesh | undefined;
+    soundBufferAmbient: Promise<AudioBuffer>;
+
+    constructor() {
+        super();
+        this.soundBufferAmbient = WorldSceneMoonEarth.soundBufferAmbient;
+    }
 
     public async build(world: World) {
         const collisionMap = new THREE.Object3D();
@@ -130,3 +145,4 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         this.moon.add(player);
     }
 }
+WorldSceneMoonEarth.initialize();

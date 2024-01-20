@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import Stats from 'three/addons/libs/stats.module.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
@@ -54,6 +55,8 @@ export class App {
     private bloomComposer: EffectComposer | undefined;
     private finalComposer: EffectComposer | undefined;
     private bloomLayer = new THREE.Layers();
+
+    onAfterFirstUserAction: () => void = () => {};
 
     constructor() {
         this.clock = new THREE.Clock();
@@ -123,16 +126,6 @@ export class App {
             this.gamepad.buttons.length, this.gamepad.axes.length);
         });
 
-        setTimeout(() => {
-            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyPass) as ShaderToyPass;
-            if(pass) {
-                new TWEEN.Tween(pass.uniforms)
-                    .to({warp:{value: 0}, scan:{value:0}}, 5000)
-                    .onComplete(() => { if(pass) pass.enabled = false;})
-                    .start();
-            }
-        }, 5000);
-
     }
 
     hanldeTouch(e: TouchEvent) {
@@ -178,7 +171,7 @@ export class App {
         App.firstUserAction = false;
 
         App.firstUserActionEvents.forEach((event) => {
-            document.removeEventListener(event, this.onFirstUserAction.bind(this));
+            document.removeEventListener(event, this.onFirstUserAction);
         });
 
         document.getElementById('loading')?.remove();
@@ -194,7 +187,8 @@ export class App {
         
         //start game loop
         this.renderer.setAnimationLoop(this.update.bind(this));
-        this.fadeClear(2000, 0xffffff);
+
+        this.onAfterFirstUserAction();
     }
 
     askInstallPWA() {
@@ -214,28 +208,8 @@ export class App {
         //init world
         this.world = new World(this.audioListenerPromise, App.gui);
         this.world.addEventListener('needHudUpdate', () => this.updateHud());
-        this.world.addEventListener('levelUp', async () => {
-            if(!this.world || !this.player) return;
-
-            if(this.world.worldScene instanceof WorldSceneMoonEarth) {
-                await this.fadeBlack(500);
-                this.world.stopWorldAudio();
-                this.vibrate(8000);
-                this.world.loadScene(new WorldSceneWormhole()); 
-                this.fadeClear(500, 0xffffff);
-            } else if(this.world.worldScene instanceof WorldSceneWormhole) {
-                this.fade(0xffffff, 0, 500);
-                this.world.stopWorldAudio();
-                this.player.teleport(this.world.playerSpawnPoint);
-                this.world.allLightsOff();
-                this.world.loadScene(new WorldSceneDeepSpace());
-                this.fadeClear();
-                return;
-            }
-
-            
-        });
-        this.scene = await this.world.loadScene(new WorldSceneMoonEarth());
+        this.world.addEventListener('levelUp', this.levelUp);
+        this.scene = this.world.scene;
 
         let fov = 70;
         this.camera = new THREE.PerspectiveCamera(
@@ -274,38 +248,76 @@ export class App {
         this.scene.add(this.player);
         this.updateHud();
 
-        /*
-        this.bloomLayer.set( App.BLOOM_SCENE );
+        //this.onAfterFirstUserAction = async () => { this.levelUp(); }
 
-        const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
-        bloomPass.threshold = 0;
-        bloomPass.strength = 0.4;
-        bloomPass.radius = 1;
-
-        this.bloomComposer = new EffectComposer( this.renderer );
-        this.bloomComposer.renderToScreen = false;
-        this.bloomComposer.addPass( renderScene );
-        this.bloomComposer.addPass( bloomPass );
-        */
-
-        const crtPass = new ShaderToyCrt(this.renderer, {
-            warp: { value: 0.95 },
-            scan: { value: 0.95 }
-        });
-
+        const crtPass = new ShaderToyCrt(this.renderer, { warp: { value: 0 }, scan: { value: 0 } });
+        const bloom = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 0, 0.4, 0.85 );
         //const interStellarPass = new ShaderToyInterstellar(this.renderer);
 
         const renderScene = new RenderPass( this.scene, this.camera );
         const outputPass = new OutputPass();
         this.finalComposer = new EffectComposer( this.renderer );
         this.finalComposer.addPass( renderScene );
+        this.finalComposer.addPass( bloom );
         this.finalComposer.addPass( crtPass );
         //this.finalComposer.addPass( interStellarPass );
         this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
+        this.onAfterFirstUserAction = async () => { this.levelUp(); }
 
         this.resize();
+    }
+
+    async levelUp() {
+        if(!this.world || !this.player) return;
+
+        if(!this.world.worldScene) {
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyCrt) as ShaderToyCrt;
+            if(pass) {
+                pass.uniforms.warp.value = 0.95;
+                pass.uniforms.scan.value = 0.95;
+                new TWEEN.Tween(pass.uniforms)
+                    .to({warp:{value: 0}, scan:{value:0}}, 5000)
+                    .onComplete(() => { if(pass) pass.enabled = false;})
+                    .delay(5000)
+                    .start();
+            }
+            this.world.loadScene(new WorldSceneMoonEarth()); 
+            this.fadeClear(2000, 0xffffff);
+
+        } else if(this.world.worldScene instanceof WorldSceneMoonEarth) {
+
+            await this.fadeBlack(500);
+            this.world.stopWorldAudio();
+            this.vibrate(8000);
+            this.world.loadScene(new WorldSceneWormhole()); 
+            this.fadeClear(500, 0xffffff);
+        } else if(this.world.worldScene instanceof WorldSceneWormhole) {
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;
+            if(pass) {
+                pass.strength = 1.5;
+                new TWEEN.Tween(pass)
+                    .to({strength:0}, 2000)
+                    .onComplete(() => { if(pass) pass.enabled = false;})
+                    .delay(7000)
+                    .start();
+            }
+
+            this.fade(0xffffff, 0, 500);
+            this.world.stopWorldAudio();
+            this.player.teleport(this.world.playerSpawnPoint);
+            this.world.allLightsOff();
+            this.world.loadScene(new WorldSceneDeepSpace());
+            this.fadeClear();
+            return;
+        } else if(this.world.worldScene instanceof WorldSceneDeepSpace) {
+            this.vibrate(1000);
+            this.fadeDie();
+            this.world.stopWorldAudio();
+            return;
+        }
+        
     }
 
     enableOrbitControls() {
