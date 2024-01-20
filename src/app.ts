@@ -12,11 +12,10 @@ import { Player } from './player';
 import { World } from './world';
 import { ShaderToyPass } from './ShaderToyPass';
 import { ShaderToyCrt } from './ShaderToyCrt';
-import { ShaderToyInterstellar } from './ShaderToyInterstellar';
 import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
 import { WorldSceneWormhole } from './worldSceneWormhole';
-import { WorldSceneStars } from './worldSceneStars';
 import { WorldSceneDeepSpace } from './worldSceneDeepSpace';
+import { WorldSceneClass } from './worldScene';
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -208,7 +207,7 @@ export class App {
         //init world
         this.world = new World(this.audioListenerPromise, App.gui);
         this.world.addEventListener('needHudUpdate', () => this.updateHud());
-        this.world.addEventListener('levelUp', this.levelUp);
+        this.world.addEventListener('levelUp', () => this.levelUp());
         this.scene = this.world.scene;
 
         let fov = 70;
@@ -264,15 +263,25 @@ export class App {
         this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
-        this.onAfterFirstUserAction = async () => { this.levelUp(); }
+        this.onAfterFirstUserAction = async () => { this.levelUp(WorldSceneWormhole); }
 
         this.resize();
     }
 
-    async levelUp() {
+    async levelUp(nextWorldScene: WorldSceneClass<any> | undefined = undefined) {
         if(!this.world || !this.player) return;
 
-        if(!this.world.worldScene) {
+        if(!nextWorldScene) {
+            if(!this.world.worldScene) {
+                nextWorldScene = WorldSceneMoonEarth;
+            } else if(this.world.worldScene instanceof WorldSceneMoonEarth) {
+                nextWorldScene = WorldSceneWormhole;
+            } else if(this.world.worldScene instanceof WorldSceneWormhole) {
+                nextWorldScene = WorldSceneDeepSpace;
+            }
+        }
+
+        if(nextWorldScene === WorldSceneMoonEarth) {
             const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyCrt) as ShaderToyCrt;
             if(pass) {
                 pass.uniforms.warp.value = 0.95;
@@ -286,24 +295,24 @@ export class App {
             this.world.loadScene(new WorldSceneMoonEarth()); 
             this.fadeClear(2000, 0xffffff);
 
-        } else if(this.world.worldScene instanceof WorldSceneMoonEarth) {
-
+        } else if(nextWorldScene === WorldSceneWormhole) {
             await this.fadeBlack(500);
             this.world.stopWorldAudio();
             this.vibrate(8000);
             this.world.loadScene(new WorldSceneWormhole()); 
             this.fadeClear(500, 0xffffff);
-        } else if(this.world.worldScene instanceof WorldSceneWormhole) {
+
             const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;
             if(pass) {
                 pass.strength = 1.5;
                 new TWEEN.Tween(pass)
-                    .to({strength:0}, 2000)
+                    .to({strength:0}, 1000)
                     .onComplete(() => { if(pass) pass.enabled = false;})
                     .delay(7000)
                     .start();
             }
 
+        } else if(nextWorldScene === WorldSceneDeepSpace) {
             this.fade(0xffffff, 0, 500);
             this.world.stopWorldAudio();
             this.player.teleport(this.world.playerSpawnPoint);
@@ -311,7 +320,7 @@ export class App {
             this.world.loadScene(new WorldSceneDeepSpace());
             this.fadeClear();
             return;
-        } else if(this.world.worldScene instanceof WorldSceneDeepSpace) {
+        } else if(nextWorldScene === undefined) {
             this.vibrate(1000);
             this.fadeDie();
             this.world.stopWorldAudio();
