@@ -108,7 +108,7 @@ export class App {
         window.addEventListener("touchstart", (e) => this.hanldeTouch(e));
         window.addEventListener("touchend", (e) => this.hanldeTouch(e));
 
-        window.addEventListener('mousedown', async () => {
+        this.renderer.domElement.addEventListener('mousedown', async () => {
             if (document.pointerLockElement === this.renderer.domElement) return;
             try{
                 await this.renderer.domElement.requestPointerLock();
@@ -154,6 +154,9 @@ export class App {
     }
 
     initDebugGui() {
+        const axesHelper = new THREE.AxesHelper( 5 );
+        axesHelper.visible = false;
+
         App.gui.add({ debugPlayer: false }, 'debugPlayer')
             .onChange(function (value) {
                 Player.debug = value;
@@ -163,6 +166,12 @@ export class App {
                 if (this.world && this.world.helper) {
                     this.world.helper.visible = value;
                 }
+            });
+        App.gui.add({ showAxesHelper: false }, 'showAxesHelper')
+            .onChange((value: boolean) => {
+                axesHelper.removeFromParent();
+                this.player?.add(axesHelper);
+                axesHelper.visible = value;
             });
     }
 
