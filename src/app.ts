@@ -108,7 +108,14 @@ export class App {
         window.addEventListener("touchstart", (e) => this.hanldeTouch(e));
         window.addEventListener("touchend", (e) => this.hanldeTouch(e));
 
-        window.addEventListener('mousedown', () => this.renderer.domElement.requestPointerLock());
+        window.addEventListener('mousedown', async () => {
+            if (document.pointerLockElement === this.renderer.domElement) return;
+            try{
+                await this.renderer.domElement.requestPointerLock();
+            } catch(e) {
+                console.log("requestPointerLock failed", e);
+            }            
+        });
         window.addEventListener('mousemove', (e) => {
             if(!this.player) return;
             //check pointer lock
