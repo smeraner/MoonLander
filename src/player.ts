@@ -88,8 +88,6 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.loadModel();
         this.initAudio(audioListenerPromise);
 
-        this.camera.position.set(1, 0.8, -2);
-        this.camera.lookAt(1, 0.8, 0);
         this.add(camera)
 
         //collider
@@ -259,7 +257,10 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
         this.velocity.set(0, 0, 0);
         this.onFloor = true;
-
+        this.camera.position.set(1, 0.8, -2);
+        this.camera.rotation.set(0, 0, 0);
+        //todo: fix camera
+        this.camera.lookAt(1, 0.8, 0);
     }
 
     getForwardVector(): THREE.Vector3 {

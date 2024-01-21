@@ -10,7 +10,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { Player } from './player';
 import { World } from './world';
-import { ShaderToyPass } from './ShaderToyPass';
 import { ShaderToyCrt } from './ShaderToyCrt';
 import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
 import { WorldSceneWormhole } from './worldSceneWormhole';
@@ -263,7 +262,7 @@ export class App {
         this.finalComposer.addPass( outputPass );
 
         //this.enableOrbitControls();
-        this.onAfterFirstUserAction = async () => { this.levelUp(WorldSceneWormhole); }
+        this.onAfterFirstUserAction = async () => { this.levelUp(); }
 
         this.resize();
     }
@@ -284,6 +283,7 @@ export class App {
         if(nextWorldScene === WorldSceneMoonEarth) {
             const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyCrt) as ShaderToyCrt;
             if(pass) {
+                pass.enabled = true;
                 pass.uniforms.warp.value = 0.95;
                 pass.uniforms.scan.value = 0.95;
                 new TWEEN.Tween(pass.uniforms)
@@ -292,7 +292,8 @@ export class App {
                     .delay(5000)
                     .start();
             }
-            this.world.loadScene(new WorldSceneMoonEarth()); 
+            this.world.loadScene(new WorldSceneMoonEarth());
+            this.player.teleport(this.world.playerSpawnPoint);
             this.fadeClear(2000, 0xffffff);
 
         } else if(nextWorldScene === WorldSceneWormhole) {
@@ -304,12 +305,8 @@ export class App {
 
             const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;
             if(pass) {
+                pass.enabled = true;
                 pass.strength = 1.5;
-                new TWEEN.Tween(pass)
-                    .to({strength:0}, 1000)
-                    .onComplete(() => { if(pass) pass.enabled = false;})
-                    .delay(7000)
-                    .start();
             }
 
         } else if(nextWorldScene === WorldSceneDeepSpace) {
@@ -319,11 +316,26 @@ export class App {
             this.world.allLightsOff();
             this.world.loadScene(new WorldSceneDeepSpace());
             this.fadeClear();
+
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;
+            if(pass) {
+                pass.enabled = true;
+                pass.strength = 0.5;
+            }
             return;
         } else if(nextWorldScene === undefined) {
+            const pass = this.finalComposer?.passes.find((p)=>p instanceof ShaderToyCrt) as ShaderToyCrt;
+            if(pass) {
+                pass.enabled = true;
+                pass.uniforms.warp.value = 0;
+                pass.uniforms.scan.value = 0;
+                new TWEEN.Tween(pass.uniforms)
+                    .to({warp:{value: 0.95}, scan:{value:0.95}}, 1000)
+                    .start();
+            }
             this.vibrate(1000);
+            this.player.damage(100);
             this.fadeDie();
-            this.world.stopWorldAudio();
             return;
         }
         

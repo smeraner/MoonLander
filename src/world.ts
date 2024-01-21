@@ -1,14 +1,11 @@
 import * as THREE from 'three';
-import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OctreeHelper } from 'three/addons/helpers/OctreeHelper.js';
 import { Octree } from 'three/addons/math/Octree.js';
 import { Player } from './player';
-import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
 import { WorldScene } from './worldScene';
-import { WorldSceneWormhole } from './worldSceneWormhole';
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('./draco/');
@@ -97,7 +94,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         }
     }
 
-    async loadScene(worldScene: WorldScene =new WorldSceneMoonEarth()): Promise<THREE.Scene> {
+    async loadScene(worldScene: WorldScene): Promise<THREE.Scene> {
         //clean scene
         this.cleanScene();
 
