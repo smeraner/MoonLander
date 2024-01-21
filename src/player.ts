@@ -56,7 +56,7 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         Player.model = gltfLoader.loadAsync('./models/lander.glb').then(gltf => {
             gltf.scene.scale.set(0.2, 0.2, 0.2);
             gltf.scene.position.y = 0.7;
-            gltf.scene.rotation.x = -Math.PI / 2;
+            gltf.scene.rotation.x = Math.PI / 2;
             gltf.scene.traverse(child => {
                 const mesh = child as THREE.Mesh;
                 mesh.castShadow = true;
@@ -88,7 +88,10 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.loadModel();
         this.initAudio(audioListenerPromise);
 
-        this.add(camera)
+        camera.rotation.order = "YXZ";
+        this.add(camera);
+
+        this.rotation.order = "YXZ";
 
         //collider
         const capsuleGeometry = new THREE.CapsuleGeometry(this.collider.radius, this.collider.end.y - this.collider.start.y);
@@ -158,11 +161,11 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
     rotate(x: number, y: number) {
         if(this.onFloor) {
-            this.camera.rotation.y += x;
-            this.camera.rotation.x -= y;
+            this.camera.rotation.y -= x;
+            this.camera.rotation.x += y;
         } else {
             this.rotation.y -= x;
-            this.rotation.x -= y;
+            this.rotation.x += y;
         }
     }
 
@@ -229,12 +232,6 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
      */
     update(deltaTime: number, world: World): void {
 
-        let damping = 0//Math.exp(- 4 * deltaTime) - 1;
-        // if (!this.onFloor) {
-        //     this.velocity.y -= this.gravity * deltaTime;
-        //     damping *= 0.1; // small air resistance
-        // }
-        this.velocity.addScaledVector(this.velocity, damping);
         this.currentSpeed = this.velocity.length();
 
         const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime);
@@ -250,6 +247,7 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
     teleport(position: THREE.Vector3): void {
         this.position.copy(position);
+        this.rotation.set(0, Math.PI, 0);
         this.collider.start.copy(position);
         this.collider.end.copy(position);
         this.collider.end.y += this.colliderHeight;
@@ -257,10 +255,10 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
         this.velocity.set(0, 0, 0);
         this.onFloor = true;
-        this.camera.position.set(1, 0.8, -2);
+        this.camera.position.set(-0.7, 0.8, 2);
         this.camera.rotation.set(0, 0, 0);
         //todo: fix camera
-        this.camera.lookAt(1, 0.8, 0);
+        //this.camera.lookAt(1, 0.8, 0);
     }
 
     getForwardVector(): THREE.Vector3 {
