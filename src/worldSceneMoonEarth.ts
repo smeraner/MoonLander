@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es'
 import { Player } from './player';
 import { World } from './world';
 import { WorldScene } from './worldScene';
 import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars';
+import { AutoCannonWorld } from './AutoCannonWorld';
 
 
 export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
@@ -21,9 +23,13 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
     earth: THREE.Mesh | undefined;
     soundBufferAmbient: Promise<AudioBuffer>;
 
+    cannonWorld= AutoCannonWorld.getWorld();
+
     constructor() {
         super();
         this.soundBufferAmbient = WorldSceneMoonEarth.soundBufferAmbient;
+
+        this.cannonWorld.addNewtonGravity();
     }
 
     public async build(world: World) {
@@ -42,12 +48,25 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         });
 
         const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
-        const moon = new THREE.Mesh(moonGeometry, moonMaterial);
-        moon.castShadow = true;
-        moon.receiveShadow = true;
-        moon.layers.enable(1); //bloom layer
-        this.moon = moon;
-        collisionMap.add(moon);
+        const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+        moonMesh.castShadow = true;
+        moonMesh.receiveShadow = true;
+        this.moon = moonMesh;
+        collisionMap.add(moonMesh);
+        this.cannonWorld.attachMesh(moonMesh, { mass: 734767 });
+
+        const cubeGeometry = new THREE.BoxGeometry(5, 5, 5);
+        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const addTestCube = (x: number, y: number, z: number) => {
+            const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cubeMesh.position.set(x, y, z);
+            collisionMap.add(cubeMesh);
+            this.cannonWorld.attachMesh(cubeMesh, { mass: 50 });
+        }
+        addTestCube(0, 25, 0);
+        addTestCube(0, -25, 0);
+        addTestCube(25, 25, 0);
+        addTestCube(-25, 25, 0);
 
         const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
         const earthReflectionTexture = await textureLoader.loadAsync('./textures/earth_reflection.jpg');
@@ -71,6 +90,8 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
     public update(deltaTime: number, world: World, player: Player) {
         if (!this.moon ||!this.earth) return;
+
+        this.cannonWorld.step(1 / 60, deltaTime, 3);
 
         this.moon.rotation.y += 0.03 * deltaTime;
 

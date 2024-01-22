@@ -28,6 +28,7 @@
     "wepack-cli": "^0.0.1-security"
   },
   "dependencies": {
+    "cannon-es": "^0.20.0",
     "three": "^0.159.0"
   }
 }
