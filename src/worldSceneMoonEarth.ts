@@ -1,11 +1,9 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es'
 import { Player } from './player';
 import { World } from './world';
 import { WorldScene } from './worldScene';
 import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars';
-import { AutoCannonWorld } from './AutoCannonWorld';
-
+import { AutoCannonWorld } from 'auto-cannon-world'
 
 export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 

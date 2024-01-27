@@ -28,6 +28,7 @@
     "wepack-cli": "^0.0.1-security"
   },
   "dependencies": {
+    "auto-cannon-world": "github:smeraner/auto-cannon-world",
     "cannon-es": "^0.20.0",
     "three": "^0.159.0"
   }
