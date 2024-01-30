@@ -94,7 +94,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         }
     }
 
-    async loadScene(worldScene: WorldScene): Promise<THREE.Scene> {
+    async loadScene(worldScene: WorldScene, player: Player): Promise<THREE.Scene> {
         //clean scene
         this.cleanScene();
 
@@ -108,7 +108,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
             this.dispatchEvent({ type: "levelUp" } as WorldLevelUpEvent);
         });
 
-        this.collisionMap = await this.worldScene.build(this);
+        this.collisionMap = await this.worldScene.build(this, player);
 
         this.scene.add(this.worldScene);
 

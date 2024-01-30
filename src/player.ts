@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import * as TWEEN from 'three/examples/jsm/libs/tween.module.js';
+import * as CANNON from 'cannon-es';
 import { World } from './world';
 import { Capsule } from 'three/addons/math/Capsule.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ThreeMFLoader } from 'three/examples/jsm/Addons.js';
+import { AutoCannonWorld, AutoBody } from 'auto-cannon-world';
 
 export interface PlyerEventMap extends THREE.Object3DEventMap {
     dead: PlayerDeadEvent;
@@ -33,10 +34,10 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
     colliderHeight = .3;
     collider = new Capsule(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, this.colliderHeight, 0), 0.5);
-    colliderMesh: THREE.Mesh<THREE.CapsuleGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>;
+    colliderMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>;
     collisionVelocity: number = 0;
 
-    velocity = new THREE.Vector3();
+    velocity: CANNON.Vec3
     direction = new THREE.Vector3();
     scene: THREE.Scene;
     camera: THREE.Camera;
@@ -49,6 +50,9 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
     tweens: TWEEN.Tween<THREE.Euler>[] = [];
     smoke= new THREE.Object3D();
     soundEngine: THREE.PositionalAudio | undefined;
+
+    cannonWorld= AutoCannonWorld.getWorld();
+    body: AutoBody;
 
     static initialize() {
         //load model     
@@ -94,14 +98,34 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.rotation.order = "YXZ";
 
         //collider
-        const capsuleGeometry = new THREE.CapsuleGeometry(this.collider.radius, this.collider.end.y - this.collider.start.y);
+        //const capsuleGeometry = new THREE.CapsuleGeometry(this.collider.radius, this.collider.end.y - this.collider.start.y);
+        const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
         const capsuleMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-        const colliderMesh = new THREE.Mesh(capsuleGeometry, capsuleMaterial);
+        const colliderMesh = new THREE.Mesh(boxGeometry, capsuleMaterial);
+        colliderMesh.rotation.y = Math.PI;
         colliderMesh.userData.obj = this;
         colliderMesh.position.copy(this.collider.start);
         this.colliderMesh = colliderMesh;
         this.scene.add(colliderMesh);
         this.colliderMesh.visible = Player.debug;
+
+        this.body = this.cannonWorld.attachMesh(colliderMesh, { mass: 500 });
+        this.body.addEventListener("collide", (event: any) => {
+            const contact = event.contact;
+            const maxImpulse = 4;
+            const impulse = contact.getImpactVelocityAlongNormal()// * contact.getContactDistance();
+            this.body.angularDamping = 0.5;
+            
+            this.onFloor = true;
+            this.smoke.visible = false;
+            this.tweens.forEach(tween => tween.stop());
+
+            if (impulse > maxImpulse) {
+                this.damage(impulse*3);
+            }
+
+        }); 
+        this.velocity = this.body.velocity;
     }
 
     async initAudio(audioListenerPromise: Promise<THREE.AudioListener>) {
@@ -164,8 +188,9 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
             this.camera.rotation.y -= x;
             this.camera.rotation.x += y;
         } else {
-            this.rotation.y -= x;
-            this.rotation.x += y;
+            //this.body.angularVelocity.set(-y*10, -x*10, 0)
+            this.body.angularVelocity.x -= y;
+            this.body.angularVelocity.y -= x;
         }
     }
 
@@ -179,11 +204,11 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
             this.soundEngine.play();
         }
         if(sideVectorMultiplyer !== null) {
-            this.velocity.add(this.getSideVector().multiplyScalar(sideVectorMultiplyer));
+            this.body.velocity.x -= sideVectorMultiplyer;
             this.fuel -= Math.abs(sideVectorMultiplyer);
         }
         if(forwardVectorMultiplier !== null) {
-            this.velocity.add(this.getForwardVector().multiplyScalar(forwardVectorMultiplier));
+            this.body.velocity.z += forwardVectorMultiplier * 1.5;
             this.fuel -= 2*Math.abs(forwardVectorMultiplier);
         }
     }
@@ -220,10 +245,10 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
             this.onFloor = true;
 
             this.collisionVelocity = this.velocity.length();
-            this.velocity.multiplyScalar(0);
+            this.velocity.set(0, 0, 0);
 
             this.collider.translate(result.normal.multiplyScalar(result.depth));
-            this.colliderMesh.position.copy(this.collider.start);
+            //this.colliderMesh.position.copy(this.collider.start);
         }
     }
 
@@ -234,12 +259,8 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
         this.currentSpeed = this.velocity.length();
 
-        const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime);
-        this.collider.translate(deltaPosition);
-
-        this.collisions(world);
-
-        this.position.copy(this.collider.end);
+        this.position.copy(this.colliderMesh.position);
+        this.rotation.copy(this.colliderMesh.rotation);
 
         this.colliderMesh.visible = Player.debug;
         TWEEN.update();
@@ -252,9 +273,9 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.collider.end.copy(position);
         this.collider.end.y += this.colliderHeight;
         this.colliderMesh.position.copy(this.collider.start);
+        this.body.position.copy(this.collider.start as any);
 
         this.velocity.set(0, 0, 0);
-        this.onFloor = true;
         this.camera.position.set(-0.7, 0.8, 2);
         this.camera.rotation.set(0, 0, 0);
         //todo: fix camera
@@ -266,17 +287,14 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.direction.normalize();
 
         return this.direction;
-
     }
 
     getSideVector(): THREE.Vector3 {
-
         this.camera.getWorldDirection(this.direction);
         this.direction.normalize();
         this.direction.cross(this.camera.up);
 
         return this.direction;
-
     }
 }
 Player.initialize();

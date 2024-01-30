@@ -308,7 +308,7 @@ export class App {
                     .delay(5000)
                     .start();
             }
-            this.world.loadScene(new WorldSceneMoonEarth());
+            this.world.loadScene(new WorldSceneMoonEarth(),this.player);
             this.player.teleport(this.world.playerSpawnPoint);
             this.fadeClear(2000, 0xffffff);
 
@@ -316,7 +316,7 @@ export class App {
             await this.fadeBlack(500);
             this.world.stopWorldAudio();
             this.vibrate(8000);
-            this.world.loadScene(new WorldSceneWormhole()); 
+            this.world.loadScene(new WorldSceneWormhole(),this.player); 
             this.fadeClear(500, 0xffffff);
 
             const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;
@@ -330,7 +330,7 @@ export class App {
             this.world.stopWorldAudio();
             this.player.teleport(this.world.playerSpawnPoint);
             this.world.allLightsOff();
-            this.world.loadScene(new WorldSceneDeepSpace());
+            this.world.loadScene(new WorldSceneDeepSpace(),this.player);
             this.fadeClear();
 
             const pass = this.finalComposer?.passes.find((p)=>p instanceof UnrealBloomPass) as UnrealBloomPass;

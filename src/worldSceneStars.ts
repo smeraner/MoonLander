@@ -16,7 +16,7 @@ export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEven
 
     private stars: THREE.Object3D<THREE.Object3DEventMap> | undefined;
 
-    public async build(world: World) {
+    public async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
 
         this.buildHemisphere();

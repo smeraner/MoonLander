@@ -34,7 +34,7 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
     speed: number = 4500;
     torusKnotpath = new TorusKnot();
 
-    async build(world: World) {
+    async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
 
         //load texture

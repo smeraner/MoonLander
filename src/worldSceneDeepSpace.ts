@@ -24,7 +24,7 @@ export class WorldSceneDeepSpace extends WorldSceneStars implements WorldScene {
         this.soundBufferAmbient = WorldSceneDeepSpace.soundBufferAmbient;
     }
 
-    public async build(world: World) {
+    public async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
  
         this.buildHemisphere();

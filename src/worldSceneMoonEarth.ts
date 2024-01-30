@@ -3,7 +3,7 @@ import { Player } from './player';
 import { World } from './world';
 import { WorldScene } from './worldScene';
 import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars';
-import { AutoCannonWorld } from 'auto-cannon-world'
+import { AutoCannonWorld } from 'auto-cannon-world';
 
 export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
@@ -28,9 +28,10 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         this.soundBufferAmbient = WorldSceneMoonEarth.soundBufferAmbient;
 
         this.cannonWorld.addNewtonGravity();
+        this.cannonWorld.maxDistanceNewtonGravity = 1000;
     }
 
-    public async build(world: World) {
+    public async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
         const textureLoader = new THREE.TextureLoader();
         const moonTexture = await textureLoader.loadAsync('./textures/moon.jpg');
@@ -51,7 +52,8 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         moonMesh.receiveShadow = true;
         this.moon = moonMesh;
         collisionMap.add(moonMesh);
-        this.cannonWorld.attachMesh(moonMesh, { mass: 734767 });
+        const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 7.3483e16 });
+        moonbody.angularVelocity.set(0, 0.1, 0);
 
         const cubeGeometry = new THREE.BoxGeometry(5, 5, 5);
         const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
@@ -59,7 +61,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
             cubeMesh.position.set(x, y, z);
             collisionMap.add(cubeMesh);
-            this.cannonWorld.attachMesh(cubeMesh, { mass: 50 });
+            this.cannonWorld.attachMesh(cubeMesh, { mass: 5000 });
         }
         addTestCube(0, 25, 0);
         addTestCube(0, -25, 0);
@@ -91,17 +93,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
         this.cannonWorld.step(1 / 60, deltaTime, 3);
 
-        this.moon.rotation.y += 0.03 * deltaTime;
-
         this.earth.rotation.y += 0.01 * deltaTime;
-
-        // gravity player to moon 1,62 m/s²
-        const moonGlobalPosition = new THREE.Vector3();
-        this.moon.getWorldPosition(moonGlobalPosition);
-        const moonGravity = 1.62 * 50;
-        const distanceToMoon = player.position.distanceTo(moonGlobalPosition);
-        const gravityForce = moonGravity * (1 / distanceToMoon);
-        player.velocity.addScaledVector(moonGlobalPosition.sub(player.position).normalize(), gravityForce * deltaTime);
 
         //check if player is on moon
         if(player.onFloor) {
@@ -109,8 +101,6 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             //first time player hits moon
             if(!world.playerHitMoon) {
                 world.playerHitMoon = true;
-                player.smoke.visible = false;
-                player.tweens.forEach(tween => tween.stop());
                 
                 //attach player from sceen to moon                
                 this.attachPlayerToMoon(player);
