@@ -104,9 +104,9 @@ export class App {
         document.addEventListener('keydown', (event) => this.keyStates[event.code] = true);
         document.addEventListener('keyup', (event) => this.keyStates[event.code] = false);
 
-        window.addEventListener("touchmove", (e) => this.hanldeTouch(e));
-        window.addEventListener("touchstart", (e) => this.hanldeTouch(e));
-        window.addEventListener("touchend", (e) => this.hanldeTouch(e));
+        window.addEventListener("touchmove", (e) => this.handleTouch(e));
+        window.addEventListener("touchstart", (e) => this.handleTouch(e));
+        window.addEventListener("touchend", (e) => this.handleTouch(e));
 
         this.renderer.domElement.addEventListener('mousedown', async () => {
             if (document.pointerLockElement === this.renderer.domElement) return;
@@ -120,7 +120,7 @@ export class App {
             if(!this.player) return;
             //check pointer lock
             if(document.pointerLockElement !== this.renderer.domElement) return;
-            this.player.rotate(e.movementX * 0.001, e.movementY * -0.001);
+            this.player.rotate(e.movementX * 0.001, e.movementY * 0.001);
             // this.player.rotation.y -= e.movementX * 0.001;
             // this.player.rotation.x += e.movementY * 0.001;
         });
@@ -133,7 +133,7 @@ export class App {
 
     }
 
-    hanldeTouch(e: TouchEvent) {
+    handleTouch(e: TouchEvent) {
         var touch = e.touches[0] || e.changedTouches[0];
         if(!touch) return;
         const x = touch.pageX;

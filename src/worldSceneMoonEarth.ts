@@ -27,7 +27,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         super();
         this.soundBufferAmbient = WorldSceneMoonEarth.soundBufferAmbient;
 
-        this.cannonWorld.addNewtonGravity();
+        //this.cannonWorld.addNewtonGravity();
         this.cannonWorld.maxDistanceNewtonGravity = 1000;
     }
 
@@ -98,36 +98,17 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         //check if player is on moon
         if(player.onFloor) {
             world.metersToLanding = 0;
-            //first time player hits moon
-            if(!world.playerHitMoon) {
-                world.playerHitMoon = true;
-                
-                //attach player from sceen to moon                
-                this.attachPlayerToMoon(player);
-
-                const totalVelocity = player.collisionVelocity;
-                console.log("playerHitMoon",totalVelocity);
-                if(totalVelocity > 0.8) {
-                    player.damage(totalVelocity*10);
-                    setTimeout(() => { // wait for bounce animation
-                        if(player.health > 0 && player.onFloor) {
-                            this.detachPlayerFromMoon(player, world);
-                            this.dispatchEvent({ type: "success" } as WorldSceneStarsSuccessEvent);
-                        }
-                    }, 2500);
-                }
-            }
         } else {
             world.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
 
-            //player left the moon
-            if(world.playerHitMoon && world.scene) {
-                world.playerHitMoon = false;
-                player.tweens.forEach(tween => tween.start());
+            // //player left the moon
+            // if(world.playerHitMoon && world.scene) {
+            //     world.playerHitMoon = false;
+            //     player.tweens.forEach(tween => tween.start());
 
-                //detach player from moon back to scene
-                this.detachPlayerFromMoon(player, world);
-            }
+            //     //detach player from moon back to scene
+            //     this.detachPlayerFromMoon(player, world);
+            // }
             if(world.metersToLanding < 200) {
                 player.smoke.visible = true;
             } else {

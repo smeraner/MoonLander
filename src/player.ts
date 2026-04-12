@@ -6,9 +6,10 @@ import { Capsule } from 'three/addons/math/Capsule.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AutoCannonWorld, AutoBody } from 'auto-cannon-world';
 
-export interface PlyerEventMap extends THREE.Object3DEventMap {
+export interface PlayerEventMap extends THREE.Object3DEventMap {
     dead: PlayerDeadEvent;
     damaged: PlayerDamageEvent;
+    landed: PlayerLandedEvent;
 }
 
 export interface PlayerDeadEvent extends THREE.Event {
@@ -19,7 +20,11 @@ export interface PlayerDamageEvent extends THREE.Event {
     type: "damaged";
 }
 
-export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableObject {
+export interface PlayerLandedEvent extends THREE.Event {
+    type: "landed";
+}
+
+export class Player extends THREE.Object3D<PlayerEventMap> implements DamageableObject {
     static debug = false;
     static model: Promise<any>;
     static smokeTexture: Promise<THREE.Texture>;
@@ -102,7 +107,7 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
         const capsuleMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
         const colliderMesh = new THREE.Mesh(boxGeometry, capsuleMaterial);
-        colliderMesh.rotation.y = Math.PI;
+        //colliderMesh.rotation.y = Math.PI;
         colliderMesh.userData.obj = this;
         colliderMesh.position.copy(this.collider.start);
         this.colliderMesh = colliderMesh;
@@ -114,15 +119,25 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
             const contact = event.contact;
             const maxImpulse = 4;
             const impulse = contact.getImpactVelocityAlongNormal()// * contact.getContactDistance();
-            this.body.angularDamping = 0.5;
             
             this.onFloor = true;
+            this.collisionVelocity = this.velocity.length();
+            this.body.velocity.set(0, 0, 0);
+            this.body.angularVelocity.set(0, 0, 0);
+
             this.smoke.visible = false;
             this.tweens.forEach(tween => tween.stop());
 
             if (impulse > maxImpulse) {
                 this.damage(impulse*3);
             }
+
+            setTimeout(() => { // wait for bounce animation
+                if(this.health > 0 && this.onFloor) {
+                    //this.detachPlayerFromMoon(player, world);
+                    this.dispatchEvent({ type: "landed" } as PlayerLandedEvent);
+                }
+            }, 1500);
 
         }); 
         this.velocity = this.body.velocity;
@@ -183,14 +198,31 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         this.score = 0;
     }
 
+    angleY=0;
+    angleX=0;
     rotate(x: number, y: number) {
         if(this.onFloor) {
             this.camera.rotation.y -= x;
             this.camera.rotation.x += y;
         } else {
-            //this.body.angularVelocity.set(-y*10, -x*10, 0)
-            this.body.angularVelocity.x -= y;
-            this.body.angularVelocity.y -= x;
+            //mouseX and mouseY to euler angles
+            //https://stackoverflow.com/questions/39560851/handling-proper-rotation-of-cannon-body-based-on-quaternion
+            // this.camera.getWorldDirection(this.direction);
+            // this.direction.normalize();
+            // this.direction.cross(this.camera.up);
+
+            let localDelta = new CANNON.Vec3(y, x, 0);
+            let worldDelta = this.body.quaternion.vmult(localDelta);
+            this.body.angularVelocity.x -= worldDelta.x;
+            this.body.angularVelocity.y -= worldDelta.y;
+            this.body.angularVelocity.z -= worldDelta.z;
+
+            // var quatX = new CANNON.Quaternion();
+            // var quatY = new CANNON.Quaternion();
+            // quatY.setFromAxisAngle(new CANNON.Vec3(this.direction.x, this.direction.y, this.direction.z), y);
+            // //quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), x);
+            // this.body.angularVelocity.x -= quatY.x;
+            // this.body.angularVelocity.y += quatY.y;
         }
     }
 
@@ -232,26 +264,6 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
         }
     }
 
-    /**
-     * 
-     * @param {World} world 
-     */
-    collisions(world: World): void {
-        const result = world.worldOctree.capsuleIntersect(this.collider);
-
-        this.onFloor = false;
-
-        if (result) {
-            this.onFloor = true;
-
-            this.collisionVelocity = this.velocity.length();
-            this.velocity.set(0, 0, 0);
-
-            this.collider.translate(result.normal.multiplyScalar(result.depth));
-            //this.colliderMesh.position.copy(this.collider.start);
-        }
-    }
-
     /***
      * @param {number} deltaTime
      */
@@ -268,7 +280,7 @@ export class Player extends THREE.Object3D<PlyerEventMap> implements DamageableO
 
     teleport(position: THREE.Vector3): void {
         this.position.copy(position);
-        this.rotation.set(0, Math.PI, 0);
+        this.rotation.set(0, 0, 0);
         this.collider.start.copy(position);
         this.collider.end.copy(position);
         this.collider.end.y += this.colliderHeight;
