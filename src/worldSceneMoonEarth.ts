@@ -5,38 +5,44 @@ import { WorldScene } from './worldScene';
 import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars';
 import { AutoCannonWorld } from 'auto-cannon-world';
 
-export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
+const MOON_RADIUS = 17;
+const DISTANCE_SCALE = 100;
+const SURFACE_OFFSET = 44;
 
+export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
     static soundBufferAmbient: Promise<AudioBuffer>;
     static initialize() {
-        //load audio     
         const audioLoader = new THREE.AudioLoader();
         WorldSceneMoonEarth.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.ogg');
-
-        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
 
     moon: THREE.Mesh | undefined;
     earth: THREE.Mesh | undefined;
     soundBufferAmbient: Promise<AudioBuffer>;
 
-    cannonWorld= AutoCannonWorld.getWorld();
+    cannonWorld = AutoCannonWorld.getWorld();
 
     constructor() {
         super();
         this.soundBufferAmbient = WorldSceneMoonEarth.soundBufferAmbient;
-
-        //this.cannonWorld.addNewtonGravity();
         this.cannonWorld.maxDistanceNewtonGravity = 1000;
     }
 
     public async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
         const textureLoader = new THREE.TextureLoader();
-        const moonTexture = await textureLoader.loadAsync('./textures/moon.jpg');
-        const moonNormalTexture = await textureLoader.loadAsync('./textures/moon_normal.jpg');
 
+        // Load all textures in parallel
+        const [moonTexture, moonNormalTexture, earthTexture, earthReflectionTexture, earthCloudsTexture] = await Promise.all([
+            textureLoader.loadAsync('./textures/moon.jpg'),
+            textureLoader.loadAsync('./textures/moon_normal.jpg'),
+            textureLoader.loadAsync('./textures/earth.jpg'),
+            textureLoader.loadAsync('./textures/earth_reflection.jpg'),
+            textureLoader.loadAsync('./textures/earth_clouds.jpg'),
+        ]);
+
+        // Moon
         const moonMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             map: moonTexture,
@@ -46,7 +52,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             normalScale: new THREE.Vector2(0.3, 0.3)
         });
 
-        const moonGeometry = new THREE.SphereGeometry(17, 64, 64); //1.737,4 km
+        const moonGeometry = new THREE.SphereGeometry(MOON_RADIUS, 64, 64);
         const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
         moonMesh.castShadow = true;
         moonMesh.receiveShadow = true;
@@ -55,23 +61,8 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 7.3483e16 });
         moonbody.angularVelocity.set(0, 0.1, 0);
 
-        const cubeGeometry = new THREE.BoxGeometry(5, 5, 5);
-        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const addTestCube = (x: number, y: number, z: number) => {
-            const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
-            cubeMesh.position.set(x, y, z);
-            collisionMap.add(cubeMesh);
-            this.cannonWorld.attachMesh(cubeMesh, { mass: 5000 });
-        }
-        addTestCube(0, 25, 0);
-        addTestCube(0, -25, 0);
-        addTestCube(25, 25, 0);
-        addTestCube(-25, 25, 0);
-
-        const earthTexture = await textureLoader.loadAsync('./textures/earth.jpg');
-        const earthReflectionTexture = await textureLoader.loadAsync('./textures/earth_reflection.jpg');
-        const earthCloudsTexture = await textureLoader.loadAsync('./textures/earth_clouds.jpg');
-        const earthGeometry = new THREE.SphereGeometry(63, 64, 64); //6371 km
+        // Earth
+        const earthGeometry = new THREE.SphereGeometry(63, 64, 64);
         const earthMaterial = new THREE.MeshStandardMaterial({ map: earthTexture, metalnessMap: earthReflectionTexture, roughness: 0.5, metalness: 0.5 });
         const earthAtmosphereMaterial = new THREE.MeshStandardMaterial({ map: earthCloudsTexture, transparent: true, opacity: 0.5 });
         const earthAtmosphere = new THREE.Mesh(earthGeometry.clone().scale(1.01, 1.01, 1.01), earthAtmosphereMaterial);
@@ -83,33 +74,30 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
         this.buildHemisphere();
 
+        player.addEventListener("landed", () => {
+            this.dispatchEvent({ type: "success" } as WorldSceneStarsSuccessEvent);
+        });
+
         this.add(collisionMap);
 
         return collisionMap;
     }
 
     public update(deltaTime: number, world: World, player: Player) {
-        if (!this.moon ||!this.earth) return;
+        if (!this.moon || !this.earth) return;
 
         this.cannonWorld.step(1 / 60, deltaTime, 3);
 
         this.earth.rotation.y += 0.01 * deltaTime;
 
-        //check if player is on moon
-        if(player.onFloor) {
+        // Check if player is on moon
+        if (player.onFloor) {
             world.metersToLanding = 0;
         } else {
-            world.metersToLanding = Number(((player.position.distanceTo(this.moon.position)-17) * 100)) - 44;
+            const distanceFromSurface = player.position.distanceTo(this.moon.position) - MOON_RADIUS;
+            world.metersToLanding = distanceFromSurface * DISTANCE_SCALE - SURFACE_OFFSET;
 
-            // //player left the moon
-            // if(world.playerHitMoon && world.scene) {
-            //     world.playerHitMoon = false;
-            //     player.tweens.forEach(tween => tween.start());
-
-            //     //detach player from moon back to scene
-            //     this.detachPlayerFromMoon(player, world);
-            // }
-            if(world.metersToLanding < 200) {
+            if (world.metersToLanding < 200) {
                 player.smoke.visible = true;
             } else {
                 player.smoke.visible = false;
@@ -118,8 +106,6 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
 
         super.update(deltaTime, world, player);
     }
-
-
 
     private detachPlayerFromMoon(player: Player, world: World) {
         if (!this.moon) return;

@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
+
 body {
 	margin: 0;
 	background-color: #000;
 	color: #fff;
-	font-family: Monospace;
+	font-family: 'Share Tech Mono', 'Courier New', monospace;
 	font-size: 13px;
 	line-height: 24px;
 	overscroll-behavior: none;
@@ -34,7 +36,15 @@ button {
 	-ms-user-select: none;
 	user-select: none;
 	pointer-events: none;
-	z-index: 1; /* TODO Solve this in HTML */
+	z-index: 1;
+}
+
+#info h1 {
+	font-family: 'Orbitron', sans-serif;
+	font-size: 1em;
+	letter-spacing: 3px;
+	color: rgba(255, 255, 255, 0.6);
+	margin: 5px 0;
 }
 
 a, button, input, select {
@@ -42,7 +52,7 @@ a, button, input, select {
 }
 
 .lil-gui {
-	z-index: 2 !important; /* TODO Solve this in HTML */
+	z-index: 2 !important;
 }
 
 @media all and ( max-width: 640px ) {
@@ -56,31 +66,165 @@ a, button, input, select {
 	}
 }
 
-#overlay {
-	position: absolute;
-	font-size: 16px;
-	z-index: 2;
+/* ─── HUD ─── */
+
+#hud {
+	position: fixed;
+	bottom: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 1;
+	pointer-events: none;
+	user-select: none;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	font-family: 'Share Tech Mono', monospace;
+}
+
+.hud-row {
+	display: flex;
+	gap: 16px;
+	align-items: center;
+}
+
+.hud-row-data {
+	gap: 24px;
+}
+
+.hud-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.hud-label {
+	font-size: 10px;
+	letter-spacing: 2px;
+	color: rgba(255, 255, 255, 0.5);
+	text-transform: uppercase;
+	min-width: 50px;
+}
+
+.hud-bar {
+	width: 120px;
+	height: 8px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hud-bar-fill {
+	height: 100%;
+	width: 100%;
+	background: linear-gradient(90deg, #ff4444, #44ff44);
+	border-radius: 4px;
+	transition: width 0.2s ease-out;
+}
+
+.hud-bar-fuel .hud-bar-fill-fuel {
+	background: linear-gradient(90deg, #ff8800, #44aaff);
+}
+
+.hud-value {
+	font-size: 14px;
+	font-family: 'Orbitron', sans-serif;
+	color: #fff;
+	min-width: 35px;
+	text-align: right;
+}
+
+.hud-data {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+}
+
+.hud-unit {
+	font-size: 9px;
+	color: rgba(255, 255, 255, 0.4);
+}
+
+.hud-value.warning {
+	color: #ffaa00;
+	animation: pulse-warning 1s ease-in-out infinite;
+}
+
+.hud-value.critical {
+	color: #ff3333;
+	animation: pulse-warning 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+/* ─── Overlays (Game Over, Pause) ─── */
+
+.overlay {
+	position: fixed;
 	top: 0;
 	left: 0;
 	width: 100%;
 	height: 100%;
+	z-index: 10;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	flex-direction: column;
-	background: rgba(0,0,0,0.7);
+	background: rgba(0, 0, 0, 0.75);
+	backdrop-filter: blur(8px);
 }
 
-	#overlay button {
-		background: transparent;
-		border: 0;
-		border: 1px solid rgb(255, 255, 255);
-		border-radius: 4px;
-		color: #ffffff;
-		padding: 12px 18px;
-		text-transform: uppercase;
-		cursor: pointer;
-	}
+.overlay-content {
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+}
+
+.overlay-content h2 {
+	font-family: 'Orbitron', sans-serif;
+	font-size: 2.5em;
+	letter-spacing: 4px;
+	margin: 0;
+	color: #fff;
+}
+
+#game-over .overlay-content h2 {
+	color: #ff4444;
+	text-shadow: 0 0 30px rgba(255, 68, 68, 0.5);
+}
+
+#pause-menu .overlay-content h2 {
+	color: #44aaff;
+	text-shadow: 0 0 30px rgba(68, 170, 255, 0.5);
+}
+
+.overlay-content button {
+	background: transparent;
+	border: 1px solid rgba(255, 255, 255, 0.4);
+	border-radius: 6px;
+	color: #ffffff;
+	padding: 14px 32px;
+	font-family: 'Orbitron', sans-serif;
+	font-size: 14px;
+	letter-spacing: 3px;
+	cursor: pointer;
+	transition: all 0.25s ease;
+	min-width: 200px;
+}
+
+.overlay-content button:hover {
+	background: rgba(255, 255, 255, 0.1);
+	border-color: rgba(255, 255, 255, 0.7);
+	transform: scale(1.05);
+}
+
+/* ─── Legacy ─── */
 
 #notSupported {
 	width: 50%;
@@ -88,4 +232,24 @@ a, button, input, select {
 	background-color: #f00;
 	margin-top: 20px;
 	padding: 10px;
+}
+
+/* ─── Responsive ─── */
+
+@media all and (max-width: 640px) {
+	#hud {
+		bottom: 10px;
+	}
+	.hud-bar {
+		width: 80px;
+	}
+	.hud-row-data {
+		gap: 12px;
+	}
+	.hud-value {
+		font-size: 12px;
+	}
+	.overlay-content h2 {
+		font-size: 1.5em;
+	}
 }

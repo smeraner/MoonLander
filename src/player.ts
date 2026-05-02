@@ -10,6 +10,7 @@ export interface PlayerEventMap extends THREE.Object3DEventMap {
     dead: PlayerDeadEvent;
     damaged: PlayerDamageEvent;
     landed: PlayerLandedEvent;
+    cameraShake: PlayerCameraShakeEvent;
 }
 
 export interface PlayerDeadEvent extends THREE.Event {
@@ -24,6 +25,11 @@ export interface PlayerLandedEvent extends THREE.Event {
     type: "landed";
 }
 
+export interface PlayerCameraShakeEvent extends THREE.Event {
+    type: "cameraShake";
+    intensity: number;
+}
+
 export class Player extends THREE.Object3D<PlayerEventMap> implements DamageableObject {
     static debug = false;
     static model: Promise<any>;
@@ -31,10 +37,10 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     static soundBufferEngine: Promise<AudioBuffer>;
 
     model: THREE.Object3D<THREE.Object3DEventMap> | undefined;
-    gravity = 0;
     speedOnFloor = 10;
     speedInAir = 7;
     currentSpeed = 0;
+    verticalSpeed = 0;
     onFloor = false;
 
     colliderHeight = .3;
@@ -42,7 +48,7 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     colliderMesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial, THREE.Object3DEventMap>;
     collisionVelocity: number = 0;
 
-    velocity: CANNON.Vec3
+    velocity: CANNON.Vec3;
     direction = new THREE.Vector3();
     scene: THREE.Scene;
     camera: THREE.Camera;
@@ -52,15 +58,22 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     damageMultiplyer: number = 1;
     score: number = 0;
     
+    isThrusting: boolean = false;
+    private landingTimer: number = 0;
+    private readonly LANDING_CONFIRM_TIME: number = 1.5;
+    private static readonly MAX_SAFE_IMPULSE: number = 4;
+    private static readonly LANDING_ANGLE_TOLERANCE: number = 0.7; // cos(~45°)
+    private static readonly FUEL_COST_RATE: number = 1.5;
+
     tweens: TWEEN.Tween<THREE.Euler>[] = [];
-    smoke= new THREE.Object3D();
+    smoke = new THREE.Object3D();
     soundEngine: THREE.PositionalAudio | undefined;
 
-    cannonWorld= AutoCannonWorld.getWorld();
+    cannonWorld = AutoCannonWorld.getWorld();
     body: AutoBody;
 
     static initialize() {
-        //load model     
+        // Load model     
         const gltfLoader = new GLTFLoader();
         Player.model = gltfLoader.loadAsync('./models/lander.glb').then(gltf => {
             gltf.scene.scale.set(0.2, 0.2, 0.2);
@@ -74,21 +87,15 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             return gltf;
         });
 
-        //load audio
+        // Load audio
         const audioLoader = new THREE.AudioLoader();
-        Player.soundBufferEngine = audioLoader.loadAsync('./sounds/engine.ogg');;
+        Player.soundBufferEngine = audioLoader.loadAsync('./sounds/engine.ogg');
 
         const textureLoader = new THREE.TextureLoader();
         Player.smokeTexture = textureLoader.loadAsync('./textures/smoke.png');
-
     }
 
-    /**
-     * @param {THREE.Scene} scene
-     * @param {Promise<THREE.AudioListener>} audioListenerPromise
-     * @param {number} gravity
-     */
-    constructor(scene: THREE.Scene, audioListenerPromise: Promise<THREE.AudioListener> ,camera: THREE.Camera) {
+    constructor(scene: THREE.Scene, audioListenerPromise: Promise<THREE.AudioListener>, camera: THREE.Camera) {
         super();
 
         this.scene = scene;
@@ -102,12 +109,10 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
 
         this.rotation.order = "YXZ";
 
-        //collider
-        //const capsuleGeometry = new THREE.CapsuleGeometry(this.collider.radius, this.collider.end.y - this.collider.start.y);
+        // Collider
         const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
         const capsuleMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
         const colliderMesh = new THREE.Mesh(boxGeometry, capsuleMaterial);
-        //colliderMesh.rotation.y = Math.PI;
         colliderMesh.userData.obj = this;
         colliderMesh.position.copy(this.collider.start);
         this.colliderMesh = colliderMesh;
@@ -117,8 +122,7 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.body = this.cannonWorld.attachMesh(colliderMesh, { mass: 500 });
         this.body.addEventListener("collide", (event: any) => {
             const contact = event.contact;
-            const maxImpulse = 4;
-            const impulse = contact.getImpactVelocityAlongNormal()// * contact.getContactDistance();
+            const impulse = Math.abs(contact.getImpactVelocityAlongNormal());
             
             this.onFloor = true;
             this.collisionVelocity = this.velocity.length();
@@ -126,19 +130,38 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             this.body.angularVelocity.set(0, 0, 0);
 
             this.smoke.visible = false;
+            this.stopEngine();
             this.tweens.forEach(tween => tween.stop());
 
-            if (impulse > maxImpulse) {
-                this.damage(impulse*3);
+            // Hard crash — take damage
+            if (impulse > Player.MAX_SAFE_IMPULSE) {
+                this.damage(impulse * 3);
+                this.dispatchEvent({ type: "cameraShake", intensity: impulse / 10 } as PlayerCameraShakeEvent);
+                return;
             }
 
-            setTimeout(() => { // wait for bounce animation
-                if(this.health > 0 && this.onFloor) {
-                    //this.detachPlayerFromMoon(player, world);
-                    this.dispatchEvent({ type: "landed" } as PlayerLandedEvent);
-                }
-            }, 1500);
+            // Check landing angle: lander's up should align with surface normal
+            const contactNormal = new CANNON.Vec3();
+            if (contact.bi === this.body) {
+                contact.ni.negate(contactNormal);
+            } else {
+                contactNormal.copy(contact.ni);
+            }
 
+            const localUp = new CANNON.Vec3(0, 0, 1);
+            const landerUp = this.body.quaternion.vmult(localUp);
+            const alignment = landerUp.dot(contactNormal);
+
+            if (alignment < Player.LANDING_ANGLE_TOLERANCE) {
+                // Tipped over landing
+                this.damage(20);
+                this.dispatchEvent({ type: "cameraShake", intensity: 0.3 } as PlayerCameraShakeEvent);
+                return;
+            }
+
+            // Soft landing at good angle — start confirmation timer
+            this.landingTimer = this.LANDING_CONFIRM_TIME;
+            this.dispatchEvent({ type: "cameraShake", intensity: impulse / 20 } as PlayerCameraShakeEvent);
         }); 
         this.velocity = this.body.velocity;
     }
@@ -149,29 +172,30 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.soundEngine = new THREE.PositionalAudio(audioListener);
         this.soundEngine.setBuffer(soundBufferEngine);
         this.soundEngine.setVolume(1);
+        this.soundEngine.setLoop(true);
     }
 
     async loadModel() {
         const landerModel = await Player.model;
 
         this.model = landerModel.scene;
-        if(!this.model) return;
+        if (!this.model) return;
 
         this.tweens.push(new TWEEN.Tween(this.model.rotation)
-            .to({ x: this.model.rotation.x, y: 0.05 , z: this.model.rotation.z }, 2000)
+            .to({ x: this.model.rotation.x, y: 0.05, z: this.model.rotation.z }, 2000)
             .easing(TWEEN.Easing.Quadratic.InOut)
             .yoyo(true)
             .repeat(Infinity)
             .start());
 
-        this.model.layers.enable(1); //bloom layer
+        this.model.layers.enable(1); // bloom layer
         this.add(this.model);
 
         this.smoke.visible = false;
         const smokeTexture = await Player.smokeTexture;
         const smokeMaterial = new THREE.MeshBasicMaterial({ map: smokeTexture, color: 0xcccccc, fog: true, opacity: 0.5, transparent: true });
 
-        for(let i = 0; i < 7; i++) {
+        for (let i = 0; i < 7; i++) {
             const smokeSize = Math.random() * 3 + 7;
             const smokeParticleGeo = new THREE.PlaneGeometry(smokeSize, smokeSize);
             const smokeParticle = new THREE.Mesh(smokeParticleGeo, smokeMaterial);
@@ -184,98 +208,120 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             smokeParticle.position.set(xpos, ypos, zpos);
 
             this.tweens.push(new TWEEN.Tween(smokeParticle.rotation)
-                .to({ x: smokeParticle.rotation.x, y:smokeParticle.rotation.y , z: 2 * Math.PI }, 500 + Math.random() * 500)
+                .to({ x: smokeParticle.rotation.x, y: smokeParticle.rotation.y, z: 2 * Math.PI }, 500 + Math.random() * 500)
                 .repeat(Infinity)
-                .start())
-                this.smoke.add(smokeParticle);
+                .start());
+            this.smoke.add(smokeParticle);
         }
         this.model.add(this.smoke);
-
     }
 
     reset() {
         this.health = 100;
+        this.fuel = 100;
         this.score = 0;
+        this.landingTimer = 0;
+        this.isThrusting = false;
+        this.onFloor = false;
     }
 
-    angleY=0;
-    angleX=0;
+    angleY = 0;
+    angleX = 0;
     rotate(x: number, y: number) {
-        if(this.onFloor) {
+        if (this.onFloor) {
             this.camera.rotation.y -= x;
             this.camera.rotation.x += y;
         } else {
-            //mouseX and mouseY to euler angles
-            //https://stackoverflow.com/questions/39560851/handling-proper-rotation-of-cannon-body-based-on-quaternion
-            // this.camera.getWorldDirection(this.direction);
-            // this.direction.normalize();
-            // this.direction.cross(this.camera.up);
-
             let localDelta = new CANNON.Vec3(y, x, 0);
             let worldDelta = this.body.quaternion.vmult(localDelta);
             this.body.angularVelocity.x -= worldDelta.x;
             this.body.angularVelocity.y -= worldDelta.y;
             this.body.angularVelocity.z -= worldDelta.z;
-
-            // var quatX = new CANNON.Quaternion();
-            // var quatY = new CANNON.Quaternion();
-            // quatY.setFromAxisAngle(new CANNON.Vec3(this.direction.x, this.direction.y, this.direction.z), y);
-            // //quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), x);
-            // this.body.angularVelocity.x -= quatY.x;
-            // this.body.angularVelocity.y += quatY.y;
-        }
-    }
-
-    useEngine(forwardVectorMultiplier: number | null, sideVectorMultiplyer: number | null) {
-        if(this.fuel <= 0) {
-            this.fuel = 0;
-            return;
-        }
-
-        if(this.soundEngine && !this.soundEngine.isPlaying) {
-            this.soundEngine.play();
-        }
-        if(sideVectorMultiplyer !== null) {
-            this.body.velocity.x -= sideVectorMultiplyer;
-            this.fuel -= Math.abs(sideVectorMultiplyer);
-        }
-        if(forwardVectorMultiplier !== null) {
-            this.body.velocity.z += forwardVectorMultiplier * 1.5;
-            this.fuel -= 2*Math.abs(forwardVectorMultiplier);
         }
     }
 
     /**
-     * Process inbound damage
-     * @param {number} amount
+     * Apply thrust in body-local space with unified fuel cost.
+     */
+    useEngine(forwardVectorMultiplier: number | null, sideVectorMultiplyer: number | null) {
+        if (this.fuel <= 0) {
+            this.fuel = 0;
+            return;
+        }
+
+        this.isThrusting = true;
+
+        if (this.soundEngine && !this.soundEngine.isPlaying) {
+            this.soundEngine.play();
+        }
+
+        // Build thrust vector in body-local space
+        const localThrust = new CANNON.Vec3(
+            -(sideVectorMultiplyer ?? 0),
+            0,
+            (forwardVectorMultiplier ?? 0) * 1.5
+        );
+
+        // Transform to world space using body orientation
+        const worldThrust = this.body.quaternion.vmult(localThrust);
+        this.body.velocity.vadd(worldThrust, this.body.velocity);
+
+        // Unified fuel cost
+        const totalThrust = Math.abs(sideVectorMultiplyer ?? 0) + Math.abs(forwardVectorMultiplier ?? 0);
+        this.fuel -= totalThrust * Player.FUEL_COST_RATE;
+    }
+
+    /**
+     * Stop the engine sound when not thrusting.
+     */
+    stopEngine() {
+        if (this.soundEngine && this.soundEngine.isPlaying) {
+            this.soundEngine.stop();
+        }
+        this.isThrusting = false;
+    }
+
+    /**
+     * Process inbound damage.
      */
     damage(amount: number) {
-        if(this.health === 0) return;
+        if (this.health === 0) return;
         
         this.health -= amount * this.damageMultiplyer;
-        this.dispatchEvent({type: "damaged"} as PlayerDamageEvent);
+        this.dispatchEvent({ type: "damaged" } as PlayerDamageEvent);
         if (this.health <= 0) {
             this.health = 0;
             this.fuel = 0;
-            this.dispatchEvent({type: "dead"} as PlayerDeadEvent);
-            //this.blendDie();
-        } else {
-            //this.blendHit();
+            this.dispatchEvent({ type: "dead" } as PlayerDeadEvent);
         }
     }
 
-    /***
-     * @param {number} deltaTime
-     */
     update(deltaTime: number, world: World): void {
-
         this.currentSpeed = this.velocity.length();
+        this.verticalSpeed = this.velocity.y;
 
         this.position.copy(this.colliderMesh.position);
         this.rotation.copy(this.colliderMesh.rotation);
 
         this.colliderMesh.visible = Player.debug;
-        TWEEN.update();
+
+        // Stop engine sound if not thrusting this frame
+        if (!this.isThrusting && this.soundEngine && this.soundEngine.isPlaying) {
+            this.stopEngine();
+        }
+        // Reset thrust flag each frame — controls() sets it if active
+        this.isThrusting = false;
+
+        // Frame-based landing confirmation
+        if (this.landingTimer > 0 && this.onFloor) {
+            this.landingTimer -= deltaTime;
+            if (this.landingTimer <= 0 && this.health > 0) {
+                this.dispatchEvent({ type: "landed" } as PlayerLandedEvent);
+                this.landingTimer = 0;
+            }
+        } else if (!this.onFloor) {
+            this.landingTimer = 0;
+        }
     }
 
     teleport(position: THREE.Vector3): void {
@@ -286,18 +332,18 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.collider.end.y += this.colliderHeight;
         this.colliderMesh.position.copy(this.collider.start);
         this.body.position.copy(this.collider.start as any);
+        this.body.quaternion.set(0, 0, 0, 1);
 
         this.velocity.set(0, 0, 0);
+        this.onFloor = false;
+        this.landingTimer = 0;
         this.camera.position.set(-0.7, 0.8, 2);
         this.camera.rotation.set(0, 0, 0);
-        //todo: fix camera
-        //this.camera.lookAt(1, 0.8, 0);
     }
 
     getForwardVector(): THREE.Vector3 {
         this.camera.getWorldDirection(this.direction);
         this.direction.normalize();
-
         return this.direction;
     }
 
@@ -305,7 +351,6 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.camera.getWorldDirection(this.direction);
         this.direction.normalize();
         this.direction.cross(this.camera.up);
-
         return this.direction;
     }
 }

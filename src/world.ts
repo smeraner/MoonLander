@@ -30,11 +30,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
     static debug = false;
     static soundBufferAmbient: Promise<AudioBuffer>;
     static initialize() {
-        //load audio     
         const audioLoader = new THREE.AudioLoader();
         World.soundBufferAmbient = audioLoader.loadAsync('./sounds/ambient.ogg');
-
-        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
 
     worldScene: WorldScene | undefined;
@@ -42,7 +39,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
     gui: GUI;
     playerSpawnPoint: THREE.Vector3;
-    scene= new THREE.Scene();
+    scene = new THREE.Scene();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
     collisionMap = new THREE.Object3D();
@@ -51,25 +48,20 @@ export class World extends THREE.Object3D<WorldEventMap> {
     public playerHitMoon: boolean = false;
     audioListenerPromise: Promise<THREE.AudioListener>;
 
-    /**
-     * @param {Promise<THREE.AudioListener>} audioListenerPromise
-     * @param {GUI} gui
-     */
+    private hudUpdateAccumulator: number = 0;
+    private readonly HUD_UPDATE_INTERVAL: number = 0.1; // seconds (~10 Hz)
+
     constructor(audioListenerPromise: Promise<THREE.AudioListener>, gui: GUI) {
         super();
 
         this.gui = gui;
         this.playerSpawnPoint = new THREE.Vector3(0, 3, -200);
         this.audioListenerPromise = audioListenerPromise;
-
-        setInterval(() => {
-            this.dispatchEvent({ type: 'needHudUpdate' } as WorldNeedHudUpdateEvent);
-        }, 200);
     }
 
     async initAudio(soundBufferAmbient: Promise<AudioBuffer>) {
         const audioListener = await this.audioListenerPromise;
-        if(this.soundAmbient && this.soundAmbient.isPlaying) this.soundAmbient.stop();
+        if (this.soundAmbient && this.soundAmbient.isPlaying) this.soundAmbient.stop();
 
         this.soundAmbient = new THREE.Audio(audioListener);
         this.soundAmbient.setBuffer(await soundBufferAmbient);
@@ -95,10 +87,10 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     async loadScene(worldScene: WorldScene, player: Player): Promise<THREE.Scene> {
-        //clean scene
+        // Clean existing scene and dispose GPU resources
         this.cleanScene();
 
-        //load scene
+        // Load scene
         this.worldScene = worldScene;
         
         if (!this.worldScene) throw new Error("worldScene not found");
@@ -112,7 +104,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         this.scene.add(this.worldScene);
 
-        //build collision octree
+        // Build collision octree
         this.rebuildOctree();
         const helper = new OctreeHelper(this.worldOctree);
         helper.visible = false;
@@ -123,7 +115,26 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     private cleanScene() {
-        if(!this.worldScene) return;
+        if (!this.worldScene) return;
+
+        // Dispose GPU resources before removing
+        this.worldScene.traverse(child => {
+            const mesh = child as THREE.Mesh;
+            if (mesh.isMesh) {
+                if (mesh.geometry) mesh.geometry.dispose();
+                if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach(m => {
+                        if ((m as any).map) (m as any).map.dispose();
+                        m.dispose();
+                    });
+                } else if (mesh.material) {
+                    if ((mesh.material as THREE.MeshStandardMaterial).map) {
+                        (mesh.material as THREE.MeshStandardMaterial).map!.dispose();
+                    }
+                    mesh.material.dispose();
+                }
+            }
+        });
 
         const objectsToRemove: THREE.Object3D[] = [];
         this.worldScene.traverse(child => {
@@ -161,9 +172,14 @@ export class World extends THREE.Object3D<WorldEventMap> {
     }
 
     update(deltaTime: number, player: Player) {
+        if (this.worldScene) this.worldScene.update(deltaTime, this, player);
 
-        if(this.worldScene) this.worldScene.update(deltaTime, this, player);
-
+        // Throttled HUD update from game loop instead of setInterval
+        this.hudUpdateAccumulator += deltaTime;
+        if (this.hudUpdateAccumulator >= this.HUD_UPDATE_INTERVAL) {
+            this.hudUpdateAccumulator = 0;
+            this.dispatchEvent({ type: 'needHudUpdate' } as WorldNeedHudUpdateEvent);
+        }
     }
 
     rebuildOctree() {

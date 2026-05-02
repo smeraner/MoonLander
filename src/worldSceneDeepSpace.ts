@@ -70,9 +70,7 @@ export class WorldSceneDeepSpace extends WorldSceneStars implements WorldScene {
     }
 
     public update(deltaTime: number, world: World, player: Player) {
-  
         super.update(deltaTime, world, player);
-        TWEEN.update();
     }
 
 }

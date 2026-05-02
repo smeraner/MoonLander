@@ -14,11 +14,66 @@
 	<body>
 		<div id="info">
 			<h1><%= htmlWebpackPlugin.options.title %></h1>
-			<div id="hud" style="font-size: 2em;">WASD to move or use gamepad.</div>
 		</div>
-		<!-- start screen, fill screen -->
+
+		<!-- HUD -->
+		<div id="hud">
+			<div class="hud-row">
+				<div class="hud-item">
+					<span class="hud-label">HEALTH</span>
+					<div class="hud-bar">
+						<div class="hud-bar-fill" id="health-bar"></div>
+					</div>
+					<span class="hud-value" id="health-value">100</span>
+				</div>
+				<div class="hud-item">
+					<span class="hud-label">FUEL</span>
+					<div class="hud-bar hud-bar-fuel">
+						<div class="hud-bar-fill hud-bar-fill-fuel" id="fuel-bar"></div>
+					</div>
+					<span class="hud-value" id="fuel-value">100%</span>
+				</div>
+			</div>
+			<div class="hud-row hud-row-data">
+				<div class="hud-data">
+					<span class="hud-label">SPEED</span>
+					<span class="hud-value" id="speed-value">0</span>
+					<span class="hud-unit">m/s</span>
+				</div>
+				<div class="hud-data">
+					<span class="hud-label">V-SPEED</span>
+					<span class="hud-value" id="vspeed-value">0</span>
+					<span class="hud-unit">m/s</span>
+				</div>
+				<div class="hud-data">
+					<span class="hud-label">ALT</span>
+					<span class="hud-value" id="altitude-value">0</span>
+					<span class="hud-unit">m</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- Game Over Overlay -->
+		<div id="game-over" class="overlay" style="display:none">
+			<div class="overlay-content">
+				<h2>☠ GAME OVER</h2>
+				<button id="restart-btn">RESTART</button>
+			</div>
+		</div>
+
+		<!-- Pause Menu -->
+		<div id="pause-menu" class="overlay" style="display:none">
+			<div class="overlay-content">
+				<h2>⏸ PAUSED</h2>
+				<button id="resume-btn">RESUME</button>
+				<button id="restart-pause-btn">RESTART</button>
+			</div>
+		</div>
+
+		<!-- Start Screen -->
 		<div id="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; backdrop-filter: blur(10px); text-align: center; vertical-align: middle;">
 			<img  src="textures/moon_lander.jpg" style="position: relative; max-width: 100%; max-height: 100%; top: 10%" />
+			<p style="color:#fff; font-family: 'Courier New', monospace; font-size: 1.2em; margin-top: 10px;">Click or tap to start &mdash; WASD to move, mouse to look</p>
 		</div>
 
 	</body>
