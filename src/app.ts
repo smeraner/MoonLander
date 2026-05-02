@@ -243,7 +243,7 @@ export class App {
 
         // Init player
         this.player = new Player(this.scene, this.audioListenerPromise, this.camera);
-        this.player.teleport(this.world.playerSpawnPoint);
+        this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
         this.player.addEventListener('dead', () => {
             this.vibrate(1000);
             this.updateHud();
@@ -309,7 +309,7 @@ export class App {
                     .start();
             }
             this.world.loadScene(new WorldSceneMoonEarth(), this.player);
-            this.player.teleport(this.world.playerSpawnPoint);
+            this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
             this.fadeClear(2000, 0xffffff);
 
         } else if (nextWorldScene === WorldSceneWormhole) {
@@ -328,7 +328,7 @@ export class App {
         } else if (nextWorldScene === WorldSceneDeepSpace) {
             this.fade(0xffffff, 0, 500);
             this.world.stopWorldAudio();
-            this.player.teleport(this.world.playerSpawnPoint);
+            this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
             this.world.allLightsOff();
             this.world.loadScene(new WorldSceneDeepSpace(), this.player);
             this.fadeClear();
@@ -375,7 +375,7 @@ export class App {
         this.isPaused = false;
 
         // Reset player and world
-        this.player.teleport(this.world.playerSpawnPoint);
+        this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
         this.player.reset();
         this.world.reset();
         this.world.allLightsOn();
@@ -555,7 +555,7 @@ export class App {
     private teleportPlayerIfOob(): void {
         if (!this.player || !this.world) return;
         if (this.world && this.player.position.y <= -25) {
-            this.player.teleport(this.world.playerSpawnPoint);
+            this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
         }
     }
 

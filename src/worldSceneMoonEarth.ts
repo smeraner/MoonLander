@@ -5,7 +5,7 @@ import { WorldScene } from './worldScene';
 import { WorldSceneStars, WorldSceneStarsSuccessEvent } from './worldSceneStars';
 import { AutoCannonWorld } from 'auto-cannon-world';
 
-const MOON_RADIUS = 17;
+const MOON_RADIUS = 100;
 const DISTANCE_SCALE = 100;
 const SURFACE_OFFSET = 44;
 
@@ -59,7 +59,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         this.moon = moonMesh;
         collisionMap.add(moonMesh);
         const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 7.3483e16 });
-        moonbody.angularVelocity.set(0, 0.1, 0);
+        moonbody.angularVelocity.set(0, 0.01, 0);
 
         // Earth
         const earthGeometry = new THREE.SphereGeometry(63, 64, 64);

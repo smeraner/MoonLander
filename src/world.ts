@@ -39,6 +39,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
     gui: GUI;
     playerSpawnPoint: THREE.Vector3;
+    playerSpawnLookAt: THREE.Vector3;
     scene = new THREE.Scene();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
@@ -56,6 +57,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
 
         this.gui = gui;
         this.playerSpawnPoint = new THREE.Vector3(0, 3, -200);
+        this.playerSpawnLookAt = new THREE.Vector3(0, 0, 0);
         this.audioListenerPromise = audioListenerPromise;
     }
 

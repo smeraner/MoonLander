@@ -324,15 +324,23 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         }
     }
 
-    teleport(position: THREE.Vector3): void {
+    teleport(position: THREE.Vector3, lookAtTarget?: THREE.Vector3): void {
         this.position.copy(position);
-        this.rotation.set(0, 0, 0);
+        
+        const target = lookAtTarget || new THREE.Vector3(0, 0, 0);
+        const tempObj = new THREE.Object3D();
+        tempObj.position.copy(position);
+        tempObj.lookAt(target);
+        
+        this.rotation.copy(tempObj.rotation);
+        this.colliderMesh.quaternion.copy(tempObj.quaternion);
+        this.body.quaternion.set(tempObj.quaternion.x, tempObj.quaternion.y, tempObj.quaternion.z, tempObj.quaternion.w);
+
         this.collider.start.copy(position);
         this.collider.end.copy(position);
         this.collider.end.y += this.colliderHeight;
         this.colliderMesh.position.copy(this.collider.start);
         this.body.position.copy(this.collider.start as any);
-        this.body.quaternion.set(0, 0, 0, 1);
 
         this.velocity.set(0, 0, 0);
         this.onFloor = false;
