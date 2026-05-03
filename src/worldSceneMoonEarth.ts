@@ -18,6 +18,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
     }
 
     moon: THREE.Mesh | undefined;
+    moonUniforms: any;
     earth: THREE.Mesh | undefined;
     soundBufferAmbient: Promise<AudioBuffer>;
 
@@ -42,11 +43,6 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             textureLoader.loadAsync('./textures/earth_clouds.jpg'),
         ]);
 
-        moonTexture.magFilter = THREE.NearestFilter;
-        moonNormalTexture.magFilter = THREE.NearestFilter;
-        moonTexture.anisotropy = 16;
-        moonNormalTexture.anisotropy = 16;
-
         // Moon
         const moonMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
@@ -57,13 +53,55 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             normalScale: new THREE.Vector2(0.3, 0.3)
         });
 
+        moonMaterial.onBeforeCompile = (shader) => {
+            shader.uniforms.detailOpacity = { value: 0 };
+            this.moonUniforms = shader.uniforms;
+
+            shader.fragmentShader = `
+                uniform float detailOpacity;
+                
+                float hash(vec2 p) {
+                    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+                }
+
+                float noise(vec2 p) {
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    return mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), f.x),
+                               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+                }
+
+                float fbm(vec2 p) {
+                    float v = 0.0;
+                    float a = 0.5;
+                    for (int i = 0; i < 4; i++) {
+                        v += a * noise(p);
+                        p *= 2.0;
+                        a *= 0.5;
+                    }
+                    return v;
+                }
+                
+                ${shader.fragmentShader}
+            `.replace(
+                '#include <map_fragment>',
+                `
+                #include <map_fragment>
+                float n = fbm(vMapUv * 15000.0);
+                vec3 detailColor = vec3(0.5 + n * 0.5);
+                diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * detailColor, detailOpacity);
+                `
+            );
+        };
+
         const moonGeometry = new THREE.SphereGeometry(MOON_RADIUS, 64, 64);
         const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
         moonMesh.castShadow = true;
         moonMesh.receiveShadow = true;
         this.moon = moonMesh;
         collisionMap.add(moonMesh);
-        const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 7.3483e16 });
+        const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 1.5e17 });
         moonbody.angularVelocity.set(0, 0.01, 0);
 
         // Earth
@@ -98,9 +136,16 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         // Check if player is on moon
         if (player.onFloor) {
             world.metersToLanding = 0;
+            if (this.moonUniforms) this.moonUniforms.detailOpacity.value = 1.0;
         } else {
             const distanceFromSurface = player.position.distanceTo(this.moon.position) - MOON_RADIUS;
             world.metersToLanding = distanceFromSurface * DISTANCE_SCALE - SURFACE_OFFSET;
+
+            if (this.moonUniforms) {
+                // Fade in from 150 units away down to 0 units
+                let targetOpacity = 1.0 - (distanceFromSurface / 150);
+                this.moonUniforms.detailOpacity.value = Math.max(0, Math.min(1, targetOpacity));
+            }
 
             if (world.metersToLanding < 200) {
                 player.smoke.visible = true;

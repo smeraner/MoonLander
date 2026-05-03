@@ -63,7 +63,7 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     private readonly LANDING_CONFIRM_TIME: number = 1.5;
     private static readonly MAX_SAFE_IMPULSE: number = 4;
     private static readonly LANDING_ANGLE_TOLERANCE: number = 0.7; // cos(~45°)
-    private static readonly FUEL_COST_RATE: number = 1.5;
+    private static readonly FUEL_COST_RATE: number = 4.5;
 
     tweens: TWEEN.Tween<THREE.Euler>[] = [];
     smoke = new THREE.Object3D();
@@ -119,7 +119,9 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.scene.add(colliderMesh);
         this.colliderMesh.visible = Player.debug;
 
-        this.body = this.cannonWorld.attachMesh(colliderMesh, { mass: 500 });
+        this.body = this.cannonWorld.attachMesh(colliderMesh, { mass: 800 });
+        this.body.angularDamping = 0.5;
+        this.body.linearDamping = 0;
         this.body.addEventListener("collide", (event: any) => {
             const contact = event.contact;
             const impulse = Math.abs(contact.getImpactVelocityAlongNormal());
@@ -298,7 +300,12 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
 
     update(deltaTime: number, world: World): void {
         this.currentSpeed = this.velocity.length();
-        this.verticalSpeed = this.velocity.y;
+        
+        // Calculate vertical speed relative to the moon (origin)
+        // A negative value means moving towards the moon
+        const radialVector = new THREE.Vector3().copy(this.position).normalize();
+        const velocityVector = new THREE.Vector3(this.velocity.x, this.velocity.y, this.velocity.z);
+        this.verticalSpeed = velocityVector.dot(radialVector);
 
         this.position.copy(this.colliderMesh.position);
         this.rotation.copy(this.colliderMesh.rotation);
@@ -309,6 +316,18 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         if (!this.isThrusting && this.soundEngine && this.soundEngine.isPlaying) {
             this.stopEngine();
         }
+        // Jitter camera when thrusting for engine realism
+        const homePosition = new THREE.Vector3(-0.7, 0.8, 2);
+        if (this.isThrusting) {
+            const jitterIntensity = 0.005;
+            this.camera.position.x = homePosition.x + (Math.random() - 0.5) * jitterIntensity;
+            this.camera.position.y = homePosition.y + (Math.random() - 0.5) * jitterIntensity;
+            this.camera.position.z = homePosition.z + (Math.random() - 0.5) * jitterIntensity;
+        } else {
+            // Smoothly return camera to home position
+            this.camera.position.lerp(homePosition, 0.1);
+        }
+
         // Reset thrust flag each frame — controls() sets it if active
         this.isThrusting = false;
 
