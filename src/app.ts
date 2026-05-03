@@ -102,13 +102,16 @@ export class App {
         window.addEventListener('resize', this.resize.bind(this));
         document.addEventListener('keydown', (event) => {
             this.keyStates[event.code] = true;
-
-            // ESC for pause
-            if (event.code === 'Escape') {
-                this.togglePause();
-            }
         });
         document.addEventListener('keyup', (event) => this.keyStates[event.code] = false);
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement !== this.renderer.domElement) {
+                if (!this.isPaused && this.player && this.player.health > 0) {
+                    this.togglePause();
+                }
+            }
+        });
 
         window.addEventListener("touchmove", (e) => this.handleTouch(e));
         window.addEventListener("touchstart", (e) => this.handleTouch(e));

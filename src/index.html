@@ -16,6 +16,9 @@
 			<h1><%= htmlWebpackPlugin.options.title %></h1>
 		</div>
 
+		<!-- Crosshair -->
+		<div id="crosshair"></div>
+
 		<!-- HUD -->
 		<div id="hud">
 			<div class="hud-row">
@@ -71,9 +74,9 @@
 		</div>
 
 		<!-- Start Screen -->
-		<div id="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; backdrop-filter: blur(10px); text-align: center; vertical-align: middle;">
-			<img  src="textures/moon_lander.jpg" style="position: relative; max-width: 100%; max-height: 100%; top: 10%" />
-			<p style="color:#fff; font-family: 'Courier New', monospace; font-size: 1.2em; margin-top: 10px;">Click or tap to start &mdash; WASD to move, mouse to look</p>
+		<div id="loading">
+			<img src="textures/moon_lander.jpg" alt="Moon Lander" />
+			<p>Click or tap to start &mdash; WASD/Mouse to fly, or use Touch/Gamepad</p>
 		</div>
 
 	</body>
