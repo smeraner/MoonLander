@@ -43,6 +43,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     scene = new THREE.Scene();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
+    introTimeout: any;
     collisionMap = new THREE.Object3D();
     helper: OctreeHelper | undefined;
     public metersToLanding: number = 0;
@@ -76,7 +77,8 @@ export class World extends THREE.Object3D<WorldEventMap> {
         if (this.soundAmbient && !this.soundAmbient.isPlaying) {
             this.soundAmbient.play();
         }
-        setTimeout(() => {
+        if (this.introTimeout) clearTimeout(this.introTimeout);
+        this.introTimeout = setTimeout(() => {
             if (!this.soundIntro || this.soundIntro.isPlaying) return;
             this.soundIntro.play();
         }, 1000);
@@ -86,6 +88,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
         if (this.soundAmbient) {
             this.soundAmbient.stop();
         }
+        if (this.introTimeout) clearTimeout(this.introTimeout);
     }
 
     async loadScene(worldScene: WorldScene, player: Player): Promise<THREE.Scene> {

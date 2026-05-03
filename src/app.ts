@@ -379,12 +379,13 @@ export class App {
         this.isPaused = false;
 
         // Reset player and world
-        this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
         this.player.reset();
         this.world.reset();
         this.world.allLightsOn();
-        this.fadeClear(500);
         this.updateHud();
+
+        // Restart in the first world
+        this.levelUp(WorldSceneMoonEarth);
 
         // Re-request pointer lock
         try {

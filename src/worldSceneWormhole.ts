@@ -33,6 +33,7 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
     playerPositionIndex: number = 0;
     speed: number = 4500;
     torusKnotpath = new TorusKnot();
+    successTimer: number = 7;
 
     async build(world: World, player: Player) {
         const collisionMap = new THREE.Object3D();
@@ -58,10 +59,6 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
         this.add(directionalLight);
 
         //world.buildHemisphere();
-        setTimeout(() => { // wait for bounce animation
-            this.dispatchEvent({ type: "success" } as WorldSceneWormholeSuccessEvent);
-        }, 7000);
-
         return collisionMap;
     }
 
@@ -76,6 +73,13 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
         player.position.z = wormholeCameraPosition.z
 
         player.lookAt(this.torusKnotpath.getPoint((this.playerPositionIndex + 1) / this.speed))
+
+        if (this.successTimer > 0) {
+            this.successTimer -= deltaTime;
+            if (this.successTimer <= 0) {
+                this.dispatchEvent({ type: "success" } as WorldSceneWormholeSuccessEvent);
+            }
+        }
     }
 
 }
