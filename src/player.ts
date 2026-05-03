@@ -257,9 +257,9 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
 
         // Build thrust vector in body-local space
         const localThrust = new CANNON.Vec3(
-            -(sideVectorMultiplyer ?? 0),
+            (sideVectorMultiplyer ?? 0),
             0,
-            (forwardVectorMultiplier ?? 0) * 1.5
+            -(forwardVectorMultiplier ?? 0) * 1.5
         );
 
         // Transform to world space using body orientation
@@ -328,13 +328,13 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.position.copy(position);
         
         const target = lookAtTarget || new THREE.Vector3(0, 0, 0);
-        const tempObj = new THREE.Object3D();
-        tempObj.position.copy(position);
-        tempObj.lookAt(target);
+        const tempCam = new THREE.PerspectiveCamera();
+        tempCam.position.copy(position);
+        tempCam.lookAt(target);
         
-        this.rotation.copy(tempObj.rotation);
-        this.colliderMesh.quaternion.copy(tempObj.quaternion);
-        this.body.quaternion.set(tempObj.quaternion.x, tempObj.quaternion.y, tempObj.quaternion.z, tempObj.quaternion.w);
+        this.rotation.copy(tempCam.rotation);
+        this.colliderMesh.quaternion.copy(tempCam.quaternion);
+        this.body.quaternion.set(tempCam.quaternion.x, tempCam.quaternion.y, tempCam.quaternion.z, tempCam.quaternion.w);
 
         this.collider.start.copy(position);
         this.collider.end.copy(position);

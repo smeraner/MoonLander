@@ -127,6 +127,7 @@ export class App {
             }
         });
         window.addEventListener('mousemove', (e) => {
+            if (this.isPaused) return;
             if (!this.player) return;
             if (document.pointerLockElement !== this.renderer.domElement) return;
             this.player.rotate(e.movementX * 0.001, e.movementY * 0.001);
@@ -400,11 +401,16 @@ export class App {
         if (this.isPaused) {
             if (pauseEl) pauseEl.style.display = 'flex';
             document.exitPointerLock();
+            this.player.stopEngine();
+            if (this.world) this.world.stopWorldAudio();
+            TWEEN.getAll().forEach(t => t.pause());
         } else {
             if (pauseEl) pauseEl.style.display = 'none';
             try {
                 this.renderer.domElement.requestPointerLock();
             } catch (e) { /* ignore */ }
+            if (this.world) this.world.playWorldAudio();
+            TWEEN.getAll().forEach(t => t.resume());
         }
     }
 
@@ -568,6 +574,7 @@ export class App {
         if (this.isPaused) {
             // Still render but don't advance game state
             this.render();
+            this.clock.getDelta(); // Discard elapsed time so physics doesn't jump
             return;
         }
 
