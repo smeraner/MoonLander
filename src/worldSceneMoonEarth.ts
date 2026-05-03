@@ -42,6 +42,11 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             textureLoader.loadAsync('./textures/earth_clouds.jpg'),
         ]);
 
+        moonTexture.magFilter = THREE.NearestFilter;
+        moonNormalTexture.magFilter = THREE.NearestFilter;
+        moonTexture.anisotropy = 16;
+        moonNormalTexture.anisotropy = 16;
+
         // Moon
         const moonMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
