@@ -236,6 +236,8 @@ export class App {
         this.camera = new THREE.PerspectiveCamera(
             fov,
             window.innerWidth / window.innerHeight,
+            0.1,
+            5000
         );
 
         let filterGeometry = new THREE.SphereGeometry(0.5, 15, 32);

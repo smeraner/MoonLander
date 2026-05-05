@@ -43,15 +43,16 @@ export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEven
 
         const SHADOW_MAP_WIDTH = 1024, SHADOW_MAP_HEIGHT = 1024;
         const directionalLight = new THREE.DirectionalLight(0xffffff,3);
-        directionalLight.position.set(-1000, 20, -10);
-        directionalLight.rotation.set(-Math.PI/2, 0, 0);
+        // Position sun above and to the left — visible from spawn (0,3,-200) looking at origin,
+        // and not occluded by the moon (radius 100 at origin)
+        directionalLight.position.set(-500, 400, -600);
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.top = 18;
         directionalLight.shadow.camera.bottom = - 18;
         directionalLight.shadow.camera.left = - 18;
         directionalLight.shadow.camera.right = 18;
         directionalLight.shadow.camera.near = 18;
-        directionalLight.shadow.camera.far = 1100;
+        directionalLight.shadow.camera.far = 1200;
         directionalLight.shadow.bias = 0.0001;
 
         directionalLight.shadow.mapSize.width = SHADOW_MAP_WIDTH;
@@ -61,6 +62,14 @@ export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEven
         // const shadowHelper = new THREE.CameraHelper( directionalLight.shadow.camera );
         // this.scene.add( shadowHelper );
 
+        // Sun sphere — visible bright disc
+        const sunGeo = new THREE.SphereGeometry(30, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        sunMesh.position.copy(directionalLight.position);
+        sunMesh.layers.enable(1); // bloom layer — makes it glow
+        hemisphere.add(sunMesh);
+
         // sun lensflare
         const textureLoader = new THREE.TextureLoader();
         const textureFlare0 = await textureLoader.loadAsync('./textures/lensflare0.png');
@@ -69,6 +78,7 @@ export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEven
         const lensflare = new Lensflare();
         lensflare.addElement(new LensflareElement(textureFlare0, 700, 0, directionalLight.color));
         lensflare.addElement(new LensflareElement(textureFlare3, 70, 0.7));
+        lensflare.frustumCulled = false; // Always render lensflare
 
         directionalLight.add(lensflare);
 
