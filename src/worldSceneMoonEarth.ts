@@ -43,14 +43,14 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
             textureLoader.loadAsync('./textures/earth_clouds.jpg'),
         ]);
 
-        // Moon
+        // Moon — slightly emissive for self-illumination (drives bloom glow)
         const moonMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             map: moonTexture,
             displacementMap: moonTexture,
             displacementScale: 0.2,
             normalMap: moonNormalTexture,
-            normalScale: new THREE.Vector2(0.3, 0.3)
+            normalScale: new THREE.Vector2(0.3, 0.3),
         });
 
         moonMaterial.onBeforeCompile = (shader) => {
@@ -103,6 +103,9 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
         collisionMap.add(moonMesh);
         const moonbody = this.cannonWorld.attachMesh(moonMesh, { mass: 1.5e17 });
         moonbody.angularVelocity.set(0, 0.01, 0);
+        moonbody.angularDamping = 0;
+        moonbody.allowSleep = false;
+
 
         // Earth
         const earthGeometry = new THREE.SphereGeometry(63, 64, 64);
@@ -153,6 +156,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
                 player.smoke.visible = false;
             }
         }
+
 
         super.update(deltaTime, world, player);
     }

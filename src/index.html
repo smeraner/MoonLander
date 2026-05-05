@@ -1,83 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset=utf-8 />
-		<title><%= htmlWebpackPlugin.options.title %></title>
-		<link rel='icon' type='image/png' href='textures/icons/favicon.png'>
-		<link rel='icon' sizes='192x192' href='textures/icons/android-chrome-192x192.png'>
-		<link rel='apple-touch-icon' href='textures/icons/apple-touch-icon'>
-		<meta name='mobile-web-app-capable' content='yes'>
-		<meta name='apple-mobile-web-app-capable' content='yes'>
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<link rel="manifest" href="manifest.json" />
-	</head>
-	<body>
-		<div id="info">
-			<h1><%= htmlWebpackPlugin.options.title %></h1>
-		</div>
 
-		<!-- Crosshair -->
-		<div id="crosshair"></div>
+<head>
+	<meta charset=utf-8 />
+	<title>
+		<%= htmlWebpackPlugin.options.title %>
+	</title>
+	<link rel='icon' type='image/png' href='textures/icons/favicon.png'>
+	<link rel='icon' sizes='192x192' href='textures/icons/android-chrome-192x192.png'>
+	<link rel='apple-touch-icon' href='textures/icons/apple-touch-icon'>
+	<meta name='mobile-web-app-capable' content='yes'>
+	<meta name='apple-mobile-web-app-capable' content='yes'>
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="manifest" href="manifest.json" />
+</head>
 
-		<!-- HUD -->
-		<div id="hud">
-			<div class="hud-row">
-				<div class="hud-item">
-					<span class="hud-label">HEALTH</span>
-					<div class="hud-bar">
-						<div class="hud-bar-fill" id="health-bar"></div>
-					</div>
-					<span class="hud-value" id="health-value">100</span>
+<body style="background-color: black">
+	<div id="info">
+		<h1>
+			<%= htmlWebpackPlugin.options.title %>
+		</h1>
+	</div>
+
+	<!-- Crosshair -->
+	<div id="crosshair"></div>
+
+	<!-- HUD -->
+	<div id="hud">
+		<div class="hud-row">
+			<div class="hud-item">
+				<span class="hud-label">HEALTH</span>
+				<div class="hud-bar">
+					<div class="hud-bar-fill" id="health-bar"></div>
 				</div>
-				<div class="hud-item">
-					<span class="hud-label">FUEL</span>
-					<div class="hud-bar hud-bar-fuel">
-						<div class="hud-bar-fill hud-bar-fill-fuel" id="fuel-bar"></div>
-					</div>
-					<span class="hud-value" id="fuel-value">100%</span>
-				</div>
+				<span class="hud-value" id="health-value">100</span>
 			</div>
-			<div class="hud-row hud-row-data">
-				<div class="hud-data">
-					<span class="hud-label">SPEED</span>
-					<span class="hud-value" id="speed-value">0</span>
-					<span class="hud-unit">m/s</span>
+			<div class="hud-item">
+				<span class="hud-label">FUEL</span>
+				<div class="hud-bar hud-bar-fuel">
+					<div class="hud-bar-fill hud-bar-fill-fuel" id="fuel-bar"></div>
 				</div>
-				<div class="hud-data">
-					<span class="hud-label">V-SPEED</span>
-					<span class="hud-value" id="vspeed-value">0</span>
-					<span class="hud-unit">m/s</span>
-				</div>
-				<div class="hud-data">
-					<span class="hud-label">ALT</span>
-					<span class="hud-value" id="altitude-value">0</span>
-					<span class="hud-unit">m</span>
-				</div>
+				<span class="hud-value" id="fuel-value">100%</span>
 			</div>
 		</div>
-
-		<!-- Game Over Overlay -->
-		<div id="game-over" class="overlay" style="display:none">
-			<div class="overlay-content">
-				<h2>☠ GAME OVER</h2>
-				<button id="restart-btn">RESTART</button>
+		<div class="hud-row hud-row-data">
+			<div class="hud-data">
+				<span class="hud-label">SPEED</span>
+				<span class="hud-value" id="speed-value">0</span>
+				<span class="hud-unit">m/s</span>
+			</div>
+			<div class="hud-data">
+				<span class="hud-label">V-SPEED</span>
+				<span class="hud-value" id="vspeed-value">0</span>
+				<span class="hud-unit">m/s</span>
+			</div>
+			<div class="hud-data">
+				<span class="hud-label">ALT</span>
+				<span class="hud-value" id="altitude-value">0</span>
+				<span class="hud-unit">m</span>
 			</div>
 		</div>
+	</div>
 
-		<!-- Pause Menu -->
-		<div id="pause-menu" class="overlay" style="display:none">
-			<div class="overlay-content">
-				<h2>⏸ PAUSED</h2>
-				<button id="resume-btn">RESUME</button>
-				<button id="restart-pause-btn">RESTART</button>
-			</div>
+	<!-- Game Over Overlay -->
+	<div id="game-over" class="overlay" style="display:none">
+		<div class="overlay-content">
+			<h2>☠ GAME OVER</h2>
+			<button id="restart-btn">RESTART</button>
 		</div>
+	</div>
 
-		<!-- Start Screen -->
-		<div id="loading">
-			<img src="textures/moon_lander.jpg" alt="Moon Lander" />
-			<p>Click or tap to start &mdash; WASD/Mouse to fly, or use Touch/Gamepad</p>
+	<!-- Pause Menu -->
+	<div id="pause-menu" class="overlay" style="display:none">
+		<div class="overlay-content">
+			<h2>⏸ PAUSED</h2>
+			<button id="resume-btn">RESUME</button>
+			<button id="restart-pause-btn">RESTART</button>
 		</div>
+	</div>
 
-	</body>
+	<!-- Start Screen -->
+	<div id="loading">
+		<img src="textures/moon_lander.jpg" alt="Moon Lander" />
+		<p>Click or tap to start &mdash; WASD/Mouse to fly, or use Touch/Gamepad</p>
+	</div>
+
+</body>
+
 </html>

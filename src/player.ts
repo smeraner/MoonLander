@@ -137,7 +137,7 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
 
             // Hard crash — take damage
             if (impulse > Player.MAX_SAFE_IMPULSE) {
-                this.damage(impulse * 3);
+                this.damage(impulse * 8);
                 this.dispatchEvent({ type: "cameraShake", intensity: impulse / 10 } as PlayerCameraShakeEvent);
                 return;
             }

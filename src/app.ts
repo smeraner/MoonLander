@@ -316,6 +316,15 @@ export class App {
             this.player.teleport(this.world.playerSpawnPoint, this.world.playerSpawnLookAt);
             this.fadeClear(2000, 0xffffff);
 
+            // Bloom for moon glow — emissive surface bleeds outward
+            const moonBloom = this.finalComposer?.passes.find((p) => p instanceof UnrealBloomPass) as UnrealBloomPass;
+            if (moonBloom) {
+                moonBloom.enabled = true;
+                moonBloom.strength = 0.6;
+                moonBloom.radius = 0.8;
+                moonBloom.threshold = 0.4;
+            }
+
         } else if (nextWorldScene === WorldSceneWormhole) {
             await this.fadeBlack(500);
             this.world.stopWorldAudio();
