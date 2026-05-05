@@ -1,5 +1,11 @@
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+
+// Polyfill for globalThis.crypto in older Node versions (required by serialize-javascript)
+if (typeof globalThis.crypto === 'undefined') {
+    globalThis.crypto = crypto;
+}
 const webpack = require('webpack');
 
 const HtmlWebpackPlugin = require('html-webpack-plugin');
