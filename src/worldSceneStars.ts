@@ -45,7 +45,7 @@ export abstract class WorldSceneStars extends THREE.Object3D<WorldSceneStarsEven
         const directionalLight = new THREE.DirectionalLight(0xffffff,3);
         // Position sun above and to the left — visible from spawn (0,3,-200) looking at origin,
         // and not occluded by the moon (radius 100 at origin)
-        directionalLight.position.set(-500, 400, -600);
+        directionalLight.position.set(-1000, 400, -600);
         directionalLight.castShadow = true;
         directionalLight.shadow.camera.top = 18;
         directionalLight.shadow.camera.bottom = - 18;
