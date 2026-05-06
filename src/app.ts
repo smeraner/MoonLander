@@ -44,8 +44,12 @@ export class App {
     private filterMesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial> | undefined;
     private orbitControls: OrbitControls | undefined;
     private gamepad: Gamepad | null | undefined;
-    private touchStartX = 0;
-    private touchStartY = 0;
+    private leftTouchId: number | null = null;
+    private leftTouchStartX = 0;
+    private leftTouchStartY = 0;
+    private rightTouchId: number | null = null;
+    private rightTouchLastX = 0;
+    private rightTouchLastY = 0;
     private touchMoveX = 0;
     private touchMoveY = 0;
     private deferredInstallPrompt: any;
@@ -113,9 +117,10 @@ export class App {
             }
         });
 
-        window.addEventListener("touchmove", (e) => this.handleTouch(e));
-        window.addEventListener("touchstart", (e) => this.handleTouch(e));
-        window.addEventListener("touchend", (e) => this.handleTouch(e));
+        window.addEventListener("touchmove", (e) => this.handleTouch(e), { passive: false });
+        window.addEventListener("touchstart", (e) => this.handleTouch(e), { passive: false });
+        window.addEventListener("touchend", (e) => this.handleTouch(e), { passive: false });
+        window.addEventListener("touchcancel", (e) => this.handleTouch(e), { passive: false });
 
         this.renderer.domElement.addEventListener('mousedown', async () => {
             if (this.isPaused) return;
@@ -149,22 +154,57 @@ export class App {
     }
 
     handleTouch(e: TouchEvent) {
-        var touch = e.touches[0] || e.changedTouches[0];
-        if (!touch) return;
-        const x = touch.pageX;
-        const y = touch.pageY;
+        // Prevent default behavior to stop page scrolling on touch
+        if (e.cancelable) e.preventDefault();
+
+        const halfWidth = window.innerWidth / 2;
 
         if (e.type === "touchstart") {
-            this.touchStartX = x;
-            this.touchStartY = y;
-            this.touchMoveX = 0;
-            this.touchMoveY = 0;
-        } else if (e.type === "touchend") {
-            this.touchMoveX = 0;
-            this.touchMoveY = 0;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.pageX < halfWidth) {
+                    // Left half: Movement
+                    this.leftTouchId = touch.identifier;
+                    this.leftTouchStartX = touch.pageX;
+                    this.leftTouchStartY = touch.pageY;
+                    this.touchMoveX = 0;
+                    this.touchMoveY = 0;
+                } else {
+                    // Right half: Rotation (camera aim)
+                    this.rightTouchId = touch.identifier;
+                    this.rightTouchLastX = touch.pageX;
+                    this.rightTouchLastY = touch.pageY;
+                }
+            }
         } else if (e.type === "touchmove") {
-            this.touchMoveX = 4 * (x - this.touchStartX) / window.innerWidth;
-            this.touchMoveY = 4 * (y - this.touchStartY) / window.innerHeight;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === this.leftTouchId) {
+                    this.touchMoveX = 4 * (touch.pageX - this.leftTouchStartX) / window.innerWidth;
+                    this.touchMoveY = 4 * (touch.pageY - this.leftTouchStartY) / window.innerHeight;
+                } else if (touch.identifier === this.rightTouchId) {
+                    const deltaX = touch.pageX - this.rightTouchLastX;
+                    const deltaY = touch.pageY - this.rightTouchLastY;
+
+                    if (!this.isPaused && this.player) {
+                        this.player.rotate(deltaX * 0.005, deltaY * 0.005);
+                    }
+
+                    this.rightTouchLastX = touch.pageX;
+                    this.rightTouchLastY = touch.pageY;
+                }
+            }
+        } else if (e.type === "touchend" || e.type === "touchcancel") {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === this.leftTouchId) {
+                    this.leftTouchId = null;
+                    this.touchMoveX = 0;
+                    this.touchMoveY = 0;
+                } else if (touch.identifier === this.rightTouchId) {
+                    this.rightTouchId = null;
+                }
+            }
         }
     }
 
