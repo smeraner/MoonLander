@@ -59,6 +59,9 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     score: number = 0;
     
     isThrusting: boolean = false;
+    private radialVector = new THREE.Vector3();
+    private velocityVector = new THREE.Vector3();
+    private readonly homePosition = new THREE.Vector3(-0.7, 0.8, 2);
     private landingTimer: number = 0;
     private readonly LANDING_CONFIRM_TIME: number = 1.5;
     private static readonly MAX_SAFE_IMPULSE: number = 4;
@@ -303,9 +306,9 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         
         // Calculate vertical speed relative to the moon (origin)
         // A negative value means moving towards the moon
-        const radialVector = new THREE.Vector3().copy(this.position).normalize();
-        const velocityVector = new THREE.Vector3(this.velocity.x, this.velocity.y, this.velocity.z);
-        this.verticalSpeed = velocityVector.dot(radialVector);
+        this.radialVector.copy(this.position).normalize();
+        this.velocityVector.set(this.velocity.x, this.velocity.y, this.velocity.z);
+        this.verticalSpeed = this.velocityVector.dot(this.radialVector);
 
         this.position.copy(this.colliderMesh.position);
         this.rotation.copy(this.colliderMesh.rotation);
@@ -317,15 +320,14 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             this.stopEngine();
         }
         // Jitter camera when thrusting for engine realism
-        const homePosition = new THREE.Vector3(-0.7, 0.8, 2);
         if (this.isThrusting) {
             const jitterIntensity = 0.005;
-            this.camera.position.x = homePosition.x + (Math.random() - 0.5) * jitterIntensity;
-            this.camera.position.y = homePosition.y + (Math.random() - 0.5) * jitterIntensity;
-            this.camera.position.z = homePosition.z + (Math.random() - 0.5) * jitterIntensity;
+            this.camera.position.x = this.homePosition.x + (Math.random() - 0.5) * jitterIntensity;
+            this.camera.position.y = this.homePosition.y + (Math.random() - 0.5) * jitterIntensity;
+            this.camera.position.z = this.homePosition.z + (Math.random() - 0.5) * jitterIntensity;
         } else {
             // Smoothly return camera to home position
-            this.camera.position.lerp(homePosition, 0.1);
+            this.camera.position.lerp(this.homePosition, 0.1);
         }
 
         // Reset thrust flag each frame — controls() sets it if active
