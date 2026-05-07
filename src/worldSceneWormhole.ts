@@ -19,8 +19,6 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
         //load audio     
         const audioLoader = new THREE.AudioLoader();
         WorldSceneWormhole.soundBufferAmbient = audioLoader.loadAsync('./sounds/warp-ambient.mp3');
-
-        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
     soundBufferAmbient: Promise<AudioBuffer>;
 

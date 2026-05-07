@@ -13,8 +13,6 @@ export class WorldSceneDeepSpace extends WorldSceneStars implements WorldScene {
         //load audio     
         const audioLoader = new THREE.AudioLoader();
         WorldSceneDeepSpace.soundBufferAmbient = audioLoader.loadAsync('./sounds/dark-ambient.mp3');
-
-        // World.soundBufferIntro = audioLoader.loadAsync('./sounds/intro.ogg');
     }
     soundBufferAmbient: Promise<AudioBuffer>;
     planeMeshBackground: THREE.Mesh | undefined;
