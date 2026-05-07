@@ -55,6 +55,8 @@ export class App {
     private deferredInstallPrompt: any;
     private bloomComposer: EffectComposer | undefined;
     private finalComposer: EffectComposer | undefined;
+    private crtPass: ShaderToyCrt | undefined;
+    private bloomPass: UnrealBloomPass | undefined;
     private bloomLayer = new THREE.Layers();
     private isPaused = false;
 
@@ -312,16 +314,16 @@ export class App {
         this.scene.add(this.player);
         this.updateHud();
 
-        const crtPass = new ShaderToyCrt(this.renderer, { warp: { value: 0 }, scan: { value: 0 } });
-        const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.85);
-        bloom.enabled = false; // Disabled until needed — saves GPU
+        this.crtPass = new ShaderToyCrt(this.renderer, { warp: { value: 0 }, scan: { value: 0 } });
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.85);
+        this.bloomPass.enabled = false; // Disabled until needed — saves GPU
 
         const renderScene = new RenderPass(this.scene, this.camera);
         const outputPass = new OutputPass();
         this.finalComposer = new EffectComposer(this.renderer);
         this.finalComposer.addPass(renderScene);
-        this.finalComposer.addPass(bloom);
-        this.finalComposer.addPass(crtPass);
+        this.finalComposer.addPass(this.bloomPass);
+        this.finalComposer.addPass(this.crtPass);
         this.finalComposer.addPass(outputPass);
 
         this.onAfterFirstUserAction = async () => { this.levelUp(); };
@@ -343,7 +345,7 @@ export class App {
         }
 
         if (nextWorldScene === WorldSceneMoonEarth) {
-            const pass = this.finalComposer?.passes.find((p) => p instanceof ShaderToyCrt) as ShaderToyCrt;
+            const pass = this.crtPass;
             if (pass) {
                 pass.enabled = true;
                 pass.uniforms.warp.value = 0.95;
@@ -359,7 +361,7 @@ export class App {
             this.fadeClear(2000, 0xffffff);
 
             // Bloom for moon glow — emissive surface bleeds outward
-            const moonBloom = this.finalComposer?.passes.find((p) => p instanceof UnrealBloomPass) as UnrealBloomPass;
+            const moonBloom = this.bloomPass;
             if (moonBloom) {
                 moonBloom.enabled = true;
                 moonBloom.strength = 0.6;
@@ -374,7 +376,7 @@ export class App {
             this.world.loadScene(new WorldSceneWormhole(), this.player);
             this.fadeClear(500, 0xffffff);
 
-            const pass = this.finalComposer?.passes.find((p) => p instanceof UnrealBloomPass) as UnrealBloomPass;
+            const pass = this.bloomPass;
             if (pass) {
                 pass.enabled = true;
                 pass.strength = 1.5;
@@ -388,14 +390,14 @@ export class App {
             this.world.loadScene(new WorldSceneDeepSpace(), this.player);
             this.fadeClear();
 
-            const pass = this.finalComposer?.passes.find((p) => p instanceof UnrealBloomPass) as UnrealBloomPass;
+            const pass = this.bloomPass;
             if (pass) {
                 pass.enabled = true;
                 pass.strength = 0.5;
             }
             return;
         } else if (nextWorldScene === undefined) {
-            const pass = this.finalComposer?.passes.find((p) => p instanceof ShaderToyCrt) as ShaderToyCrt;
+            const pass = this.crtPass;
             if (pass) {
                 pass.enabled = true;
                 pass.uniforms.warp.value = 0;
