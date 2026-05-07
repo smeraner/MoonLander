@@ -7,7 +7,6 @@ export class ShaderToyPass extends ShaderPass {
 
     constructor(renderer: THREE.WebGLRenderer, shaderConfig : ShaderToyConfiguration ){
         super( new ShaderToyMaterial(renderer,shaderConfig), 'iChannel0' );
-        //this.needsSwap = true;
     }
 
     render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime: number, maskActive: boolean) {
