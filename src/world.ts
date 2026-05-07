@@ -43,7 +43,7 @@ export class World extends THREE.Object3D<WorldEventMap> {
     scene = new THREE.Scene();
     soundAmbient: THREE.Audio | undefined;
     soundIntro: THREE.Audio | undefined;
-    introTimeout: any;
+    introTimeout: ReturnType<typeof setTimeout> | undefined;
     collisionMap = new THREE.Object3D();
     helper: OctreeHelper | undefined;
     public metersToLanding: number = 0;
