@@ -75,6 +75,14 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
     cannonWorld = AutoCannonWorld.getWorld();
     body: AutoBody;
 
+    private _localThrust = new CANNON.Vec3();
+    private _worldThrust = new CANNON.Vec3();
+    private _localDelta = new CANNON.Vec3();
+    private _worldDelta = new CANNON.Vec3();
+    private _contactNormal = new CANNON.Vec3();
+    private _localUp = new CANNON.Vec3(0, 0, 1);
+    private _landerUp = new CANNON.Vec3();
+
     static initialize() {
         // Load model     
         const gltfLoader = new GLTFLoader();
@@ -146,16 +154,14 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             }
 
             // Check landing angle: lander's up should align with surface normal
-            const contactNormal = new CANNON.Vec3();
             if (contact.bi === this.body) {
-                contact.ni.negate(contactNormal);
+                contact.ni.negate(this._contactNormal);
             } else {
-                contactNormal.copy(contact.ni);
+                this._contactNormal.copy(contact.ni);
             }
 
-            const localUp = new CANNON.Vec3(0, 0, 1);
-            const landerUp = this.body.quaternion.vmult(localUp);
-            const alignment = landerUp.dot(contactNormal);
+            this.body.quaternion.vmult(this._localUp, this._landerUp);
+            const alignment = this._landerUp.dot(this._contactNormal);
 
             if (alignment < Player.LANDING_ANGLE_TOLERANCE) {
                 // Tipped over landing
@@ -237,11 +243,11 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
             this.camera.rotation.y -= x;
             this.camera.rotation.x += y;
         } else {
-            let localDelta = new CANNON.Vec3(y, x, 0);
-            let worldDelta = this.body.quaternion.vmult(localDelta);
-            this.body.angularVelocity.x -= worldDelta.x;
-            this.body.angularVelocity.y -= worldDelta.y;
-            this.body.angularVelocity.z -= worldDelta.z;
+            this._localDelta.set(y, x, 0);
+            this.body.quaternion.vmult(this._localDelta, this._worldDelta);
+            this.body.angularVelocity.x -= this._worldDelta.x;
+            this.body.angularVelocity.y -= this._worldDelta.y;
+            this.body.angularVelocity.z -= this._worldDelta.z;
         }
     }
 
@@ -261,15 +267,15 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         }
 
         // Build thrust vector in body-local space
-        const localThrust = new CANNON.Vec3(
+        this._localThrust.set(
             (sideVectorMultiplyer ?? 0),
             0,
             -(forwardVectorMultiplier ?? 0) * 1.5
         );
 
         // Transform to world space using body orientation
-        const worldThrust = this.body.quaternion.vmult(localThrust);
-        this.body.velocity.vadd(worldThrust, this.body.velocity);
+        this.body.quaternion.vmult(this._localThrust, this._worldThrust);
+        this.body.velocity.vadd(this._worldThrust, this.body.velocity);
 
         // Unified fuel cost
         const totalThrust = Math.abs(sideVectorMultiplyer ?? 0) + Math.abs(forwardVectorMultiplier ?? 0);
