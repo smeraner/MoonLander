@@ -206,10 +206,11 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         const smokeTexture = await Player.smokeTexture;
         const smokeMaterial = new THREE.MeshBasicMaterial({ map: smokeTexture, color: 0xcccccc, fog: true, opacity: 0.5, transparent: true });
 
+        const smokeParticleGeo = new THREE.PlaneGeometry(1, 1);
         for (let i = 0; i < 7; i++) {
             const smokeSize = Math.random() * 3 + 7;
-            const smokeParticleGeo = new THREE.PlaneGeometry(smokeSize, smokeSize);
             const smokeParticle = new THREE.Mesh(smokeParticleGeo, smokeMaterial);
+            smokeParticle.scale.set(smokeSize, smokeSize, 1);
             smokeParticle.lookAt(0, 1, 0);
 
             const xpos = Math.random() * 6 - 2;
