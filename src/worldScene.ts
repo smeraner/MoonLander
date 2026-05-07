@@ -8,5 +8,5 @@ export interface WorldScene extends THREE.Object3D {
 }
 
 export interface WorldSceneClass<T extends WorldScene> {
-    new(...args: any[]): T;
+    new(): T;
   }

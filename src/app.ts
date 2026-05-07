@@ -14,7 +14,7 @@ import { ShaderToyCrt } from './ShaderToyCrt';
 import { WorldSceneMoonEarth } from './worldSceneMoonEarth';
 import { WorldSceneWormhole } from './worldSceneWormhole';
 import { WorldSceneDeepSpace } from './worldSceneDeepSpace';
-import { WorldSceneClass } from './worldScene';
+import { WorldSceneClass, WorldScene } from "./worldScene";
 
 export class App {
     static BLOOM_SCENE = 1;
@@ -329,7 +329,7 @@ export class App {
         this.resize();
     }
 
-    async levelUp(nextWorldScene: WorldSceneClass<any> | undefined = undefined) {
+    async levelUp(nextWorldScene: WorldSceneClass<WorldScene> | undefined = undefined) {
         if (!this.world || !this.player) return;
 
         if (!nextWorldScene) {
