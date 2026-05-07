@@ -63,7 +63,6 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
 
     update(deltaTime: number, world: World, player: Player): void {
         this.playerPositionIndex++;
-        //console.log(this.playerPositionIndex);
 
         const wormholeCameraPosition = this.torusKnotpath.getPoint(this.playerPositionIndex / this.speed)
         player.position.x = wormholeCameraPosition.x
