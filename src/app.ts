@@ -94,7 +94,7 @@ export class App {
         await this.initScene();
 
         App.firstUserActionEvents.forEach((event) => {
-            document.addEventListener(event, this.onFirstUserAction.bind(this), { once: true });
+            document.addEventListener(event, this.onFirstUserAction, { once: true });
         });
 
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -233,7 +233,7 @@ export class App {
     /**
      * Executes actions when the user performs their first interaction.
      */
-    onFirstUserAction() {
+    private onFirstUserAction = () => {
         if (App.firstUserAction === false) return;
         App.firstUserAction = false;
 
