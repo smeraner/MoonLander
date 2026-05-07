@@ -368,7 +368,7 @@ export class Player extends THREE.Object3D<PlayerEventMap> implements Damageable
         this.collider.end.copy(position);
         this.collider.end.y += this.colliderHeight;
         this.colliderMesh.position.copy(this.collider.start);
-        this.body.position.copy(this.collider.start as any);
+        this.body.position.set(this.collider.start.x, this.collider.start.y, this.collider.start.z);
 
         this.velocity.set(0, 0, 0);
         this.onFloor = false;
