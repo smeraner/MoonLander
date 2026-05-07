@@ -16,6 +16,15 @@ import { WorldSceneWormhole } from './worldSceneWormhole';
 import { WorldSceneDeepSpace } from './worldSceneDeepSpace';
 import { WorldSceneClass } from './worldScene';
 
+interface BeforeInstallPromptEvent extends Event {
+    readonly platforms: Array<string>;
+    readonly userChoice: Promise<{
+        outcome: 'accepted' | 'dismissed',
+        platform: string
+    }>;
+    prompt(): Promise<void>;
+}
+
 export class App {
     static BLOOM_SCENE = 1;
 
@@ -52,7 +61,7 @@ export class App {
     private rightTouchLastY = 0;
     private touchMoveX = 0;
     private touchMoveY = 0;
-    private deferredInstallPrompt: any;
+    private deferredInstallPrompt: BeforeInstallPromptEvent | null = null;
     private bloomComposer: EffectComposer | undefined;
     private finalComposer: EffectComposer | undefined;
     private bloomLayer = new THREE.Layers();
@@ -99,7 +108,7 @@ export class App {
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            this.deferredInstallPrompt = e;
+            this.deferredInstallPrompt = e as BeforeInstallPromptEvent;
             return false;
         });
 
