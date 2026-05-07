@@ -261,7 +261,7 @@ export class App {
     }
 
     askInstallPWA() {
-        if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any)["standalone"] === true) {
+        if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true) {
             return;
         }
         if (this.deferredInstallPrompt) this.deferredInstallPrompt.prompt();
