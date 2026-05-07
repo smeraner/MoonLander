@@ -58,7 +58,6 @@ export class WorldSceneWormhole extends THREE.Object3D<WorldSceneWormholeEventMa
         directionalLight.position.set(-800, 0, 0);
         this.add(directionalLight);
 
-        //world.buildHemisphere();
         return collisionMap;
     }
 
