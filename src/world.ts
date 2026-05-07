@@ -129,12 +129,16 @@ export class World extends THREE.Object3D<WorldEventMap> {
                 if (mesh.geometry) mesh.geometry.dispose();
                 if (Array.isArray(mesh.material)) {
                     mesh.material.forEach(m => {
-                        if ((m as any).map) (m as any).map.dispose();
+                        if ('map' in m) {
+                            const map = (m as { map?: THREE.Texture }).map;
+                            if (map) map.dispose();
+                        }
                         m.dispose();
                     });
                 } else if (mesh.material) {
-                    if ((mesh.material as THREE.MeshStandardMaterial).map) {
-                        (mesh.material as THREE.MeshStandardMaterial).map!.dispose();
+                    if ('map' in mesh.material) {
+                        const map = (mesh.material as { map?: THREE.Texture }).map;
+                        if (map) map.dispose();
                     }
                     mesh.material.dispose();
                 }
