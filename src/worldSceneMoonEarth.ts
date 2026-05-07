@@ -18,7 +18,7 @@ export class WorldSceneMoonEarth extends WorldSceneStars implements WorldScene {
     }
 
     moon: THREE.Mesh | undefined;
-    moonUniforms: any;
+    moonUniforms: Record<string, THREE.IUniform> | undefined;
     earth: THREE.Mesh | undefined;
     soundBufferAmbient: Promise<AudioBuffer>;
 
